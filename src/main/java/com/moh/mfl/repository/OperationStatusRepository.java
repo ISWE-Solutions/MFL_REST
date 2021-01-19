@@ -20,6 +20,6 @@ public interface OperationStatusRepository extends JpaRepository<OperationStatus
      * @param name
      * @return list
      */
-    @Query(value = "SELECT * FROM \"MFL_operationstatus\" WHERE name ILIKE %:name%", nativeQuery = true)
+    @Query(value = "SELECT * FROM \"MFL_operationstatus\" WHERE name ILIKE %:name% ORDER BY id ASC", nativeQuery = true)
     List<OperationStatus> findByName(@Param("name") String name);
 }

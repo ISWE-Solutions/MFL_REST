@@ -5,6 +5,8 @@ import com.moh.mfl.model.DistrictTypes;
 import com.moh.mfl.model.Districts;
 import com.moh.mfl.model.Facilities;
 import com.moh.mfl.model.FacilityTypes;
+import com.moh.mfl.model.OperationStatus;
+import com.moh.mfl.model.Ownership;
 import com.moh.mfl.model.Provinces;
 import com.moh.mfl.model.Wards;
 import com.moh.mfl.repository.ConstituenciesRepository;
@@ -12,11 +14,12 @@ import com.moh.mfl.repository.DistrictTypesRepository;
 import com.moh.mfl.repository.DistrictsRepository;
 import com.moh.mfl.repository.FacilitiesRepository;
 import com.moh.mfl.repository.FacilityTypesRepository;
+import com.moh.mfl.repository.OperationStatusRepository;
+import com.moh.mfl.repository.OwnershipRepository;
 import com.moh.mfl.repository.ProvincesRepository;
 import com.moh.mfl.repository.WardsRepository;
 import com.moh.mfl.response.ApiResponse;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -36,6 +39,10 @@ public class RestController {
     @Autowired
     FacilitiesRepository facilitiesRepository;
     private Facilities facilities;
+    @Autowired
+    OwnershipRepository ownershipRepository;
+    @Autowired
+    OperationStatusRepository operationStatusRepository;
     @Autowired
     FacilityTypesRepository facilityTypesRepository;
     private FacilityTypes facilityTypes;
@@ -161,7 +168,7 @@ public class RestController {
         try {
             Optional<Provinces> province = provincesRepository.findById(Long.valueOf(province_id));
             if (province.isPresent()) {
-                
+
                 List<Facilities> list = facilitiesRepository.findByProvinceId(Long.valueOf(province_id));
                 if (!list.isEmpty()) {
                     return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
@@ -170,6 +177,136 @@ public class RestController {
                 }
             } else {
                 return new ResponseEntity(new ApiResponse(false, "Province with id:" + province_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (NumberFormatException ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * All facility ownership endpoint
+     *
+     * @return ResponseEntity
+     */
+    @GetMapping(value = "/FacilityOwnership", produces = "application/json")
+    public ResponseEntity<?> FacilityOwnership() {
+        try {
+            List<Ownership> list = ownershipRepository.findAll();
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "No facility ownerships were found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Facility ownership by name endpoint
+     *
+     * @param name
+     * @return ResponseEntity
+     */
+    @GetMapping(value = "/FacilityOwnership/{name}", produces = "application/json")
+    public ResponseEntity<?> FacilityOwnership(@PathVariable String name) {
+        try {
+            List<Ownership> list = ownershipRepository.findByName(name);
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "Facility ownership name: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+    }
+
+    /**
+     * Facilities by ownership id endpoint
+     *
+     * @param facility_ownership_id
+     * @return
+     */
+    @GetMapping(value = "/FacilityOwnership/{facility_ownership_id}/Facilities", produces = "application/json")
+    public ResponseEntity<?> FacilitiesByOwnershipId(@PathVariable String facility_ownership_id) {
+        try {
+            Optional<Ownership> d = ownershipRepository.findById(Long.valueOf(facility_ownership_id));
+            if (d.isPresent()) {
+                List<Facilities> list = facilitiesRepository.findByOwnershipId(Long.valueOf(facility_ownership_id));
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No Facilities found for Facility ownership id: " + facility_ownership_id + "!", ""), HttpStatus.NOT_FOUND);
+                }
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "Facility ownership with id:" + facility_ownership_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (NumberFormatException ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * All facility operation status endpoint
+     *
+     * @return ResponseEntity
+     */
+    @GetMapping(value = "/FacilityOperationStatus", produces = "application/json")
+    public ResponseEntity<?> FacilityOperationStatus() {
+        try {
+            List<OperationStatus> list = operationStatusRepository.findAll();
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "No facility operation statuses were found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Facility operation status by name endpoint
+     *
+     * @param name
+     * @return ResponseEntity
+     */
+    @GetMapping(value = "/FacilityOperationStatus/{name}", produces = "application/json")
+    public ResponseEntity<?> FacilityOperationStatus(@PathVariable String name) {
+        try {
+            List<OperationStatus> list = operationStatusRepository.findByName(name);
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "Facility operation status name: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+    }
+
+    /**
+     * Facilities by operation status id endpoint
+     *
+     * @param facility_opstatus_id
+     * @return
+     */
+    @GetMapping(value = "/FacilityOperationStatus/{facility_opstatus_id}/Facilities", produces = "application/json")
+    public ResponseEntity<?> FacilitiesByOperationStatusId(@PathVariable String facility_opstatus_id) {
+        try {
+            Optional<OperationStatus> d = operationStatusRepository.findById(Long.valueOf(facility_opstatus_id));
+            if (d.isPresent()) {
+                List<Facilities> list = facilitiesRepository.findByOperationStatusId(Long.valueOf(facility_opstatus_id));
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No Facilities found for Facility operation status id: " + facility_opstatus_id + "!", ""), HttpStatus.NOT_FOUND);
+                }
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "Facility operation status with id:" + facility_opstatus_id + " was not found!", ""), HttpStatus.NOT_FOUND);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -214,6 +351,31 @@ public class RestController {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
+    }
+
+    /**
+     * Facilities by facility type id endpoint
+     *
+     * @param facility_type_id
+     * @return ResponseEntity
+     */
+    @GetMapping(value = "/Facilitytypes/{facility_type_id}/facilities", produces = "application/json")
+    public ResponseEntity<?> FacilitiestByFacilityType(@PathVariable String facility_type_id) {
+        try {
+            Optional<FacilityTypes> facilitytypes = facilityTypesRepository.findById(Long.valueOf(facility_type_id));
+            if (facilitytypes.isPresent()) {
+                List<Facilities> list = facilitiesRepository.findByFacilityTypeId(Long.valueOf(facility_type_id));
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No Facilities found for Facility type id: " + facility_type_id + "!", ""), HttpStatus.NOT_FOUND);
+                }
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "Facility type with id:" + facility_type_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (NumberFormatException ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**

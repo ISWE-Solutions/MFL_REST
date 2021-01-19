@@ -20,7 +20,7 @@ public interface ProvincesRepository extends JpaRepository<Provinces, Long> {
      *
      * @return list
      */
-    @Query(value = "SELECT id,name,population,pop_density,area_sq_km,ST_AsGeoJSON(geom) as geom FROM geography_province", nativeQuery = true)
+    @Query(value = "SELECT id,name,population,pop_density,area_sq_km,ST_AsGeoJSON(geom) as geom FROM geography_province ORDER BY id ASC", nativeQuery = true)
     @Override
     List<Provinces> findAll();
 
@@ -29,6 +29,6 @@ public interface ProvincesRepository extends JpaRepository<Provinces, Long> {
      * @param name
      * @return list
      */
-    @Query(value = "SELECT id,name,population,pop_density,area_sq_km,ST_AsGeoJSON(geom) as geom FROM geography_province WHERE name ILIKE %:name%", nativeQuery = true)
+    @Query(value = "SELECT id,name,population,pop_density,area_sq_km,ST_AsGeoJSON(geom) as geom FROM geography_province WHERE name ILIKE %:name% ORDER BY id ASC", nativeQuery = true)
     List<Provinces> findByName(@Param("name") String name);
 }

@@ -1,0 +1,13 @@
+[Unit]
+Description=Master Facility list(MFL) REST API
+After=syslog.target
+
+[Service]
+User=francis
+ExecStart=/opt/applications/mfl/target/
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target
+
+
