@@ -1,16 +1,16 @@
 <p align="center">
-    <h4 align="center">MOH Master Facility List REST API</h4>
+    <h2 align="center">MOH Master Facility List REST API</h2>
     <br>
 </p>
 
 
-DEPENDENCIES
+Dependencies
 -------------------
  * Java 8 or higher -- Refer to the installation documentation for each operating system
  * Apache Maven -- Refer to the installation documentation for each operating system
 
 
-SETUP AND INSTALLATION STEPS
+Setup and Installation steps
 ----------------------------
 ```
 - Clone the project to the installation directory of your choice
@@ -27,7 +27,7 @@ SETUP AND INSTALLATION STEPS
      include the line "Tomcat started on port(s): PORT"
 - In production/staging, you can setup the API to run as a service. 
 
-   LINUX
+   Linux
    --------------------------------------------
     * For linux, the simplest setup is using Systemd.
     * Open the file mfl.service that comes with the project using your favorite text editor 
@@ -38,14 +38,14 @@ SETUP AND INSTALLATION STEPS
        - service mfl start
     * Similarly you can use stop, restart, status
 
-   WINDOWS
+   Windows
    ----------------------------------------
      * For Windows you can use the "Windows Service Wrapper".
      * Please refer Winsw documentation for more details: [Winsw documentation](https://repo.jenkins-ci.org/releases/com/sun/winsw/winsw/)
 ```
 
 
-ENDPOINTS 
+Endpoints 
 ----------------------------
 The project contains a Postman json collection.Sample url: http://IP:8082/mfl/v1/Provinces/lusaka
 
