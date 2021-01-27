@@ -1,13 +1,13 @@
 <p align="center">
-    <h1 align="center">MOH Master Facility List REST API</h1>
+    <h4 align="center">MOH Master Facility List REST API</h4>
     <br>
 </p>
 
 
 DEPENDENCIES
 -------------------
- * Java 8 or higher -- Refer to the installation documentation for each operating systems
- * Apache Maven -- Refer to the installation documentation for each operating systems
+ * Java 8 or higher -- Refer to the installation documentation for each operating system
+ * Apache Maven -- Refer to the installation documentation for each operating system
 
 
 SETUP AND INSTALLATION STEPS
