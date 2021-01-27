@@ -3,8 +3,8 @@ Description=Master Facility list(MFL) REST API
 After=syslog.target
 
 [Service]
-User=francis
-ExecStart=/opt/applications/mfl/target/
+User=root
+ExecStart=/opt/applications/mfl/target/mfl-0.0.1-SNAPSHOT.jar
 SuccessExitStatus=143
 
 [Install]
