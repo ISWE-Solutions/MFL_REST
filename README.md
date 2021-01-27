@@ -47,12 +47,11 @@ SETUP AND INSTALLATION STEPS
 
 ENDPOINTS 
 ----------------------------
-<p>The project contains a Postman json collection.
-Sample url: http://IP:8082/mfl/v1/Provinces/lusaka
-</p>
+The project contains a Postman json collection.Sample url: http://IP:8082/mfl/v1/Provinces/lusaka
+
 ```
 End Point                                                          Verb     Description
--------------------------------------------------------------------------------------------------------------------
+-----------                                                        ------   ------------
 mfl/v1/Province/{name}                                              GET      Get province details by name
 mfl/v1/Provinces                                                    GET      Get all provinces         
 mfl/v1/Provinces/{province_id}/Districts                            GET      Get all districts in a province using province id
@@ -78,6 +77,7 @@ mfl/v1/FacilityOperationStatus/{facility_opstatus_id}/Facilities    GET      Get
 mfl/v1/FacilityOwnership                                            GET      Get all facility ownerships
 mfl/v1/FacilityOwnership/{name}                                     GET      Get all facility ownerships by name
 mfl/v1/FacilityOwnership/{facility_ownership_id}/Facilities         GET      Get all facilities by ownership id
+
 ```
 
 
