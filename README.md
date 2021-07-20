@@ -77,7 +77,7 @@ mfl/v1/FacilityOperationStatus/{facility_opstatus_id}/Facilities    GET      Get
 mfl/v1/FacilityOwnership                                            GET      Get all facility ownerships
 mfl/v1/FacilityOwnership/{name}                                     GET      Get all facility ownerships by name
 mfl/v1/FacilityOwnership/{facility_ownership_id}/Facilities         GET      Get all facilities by ownership id
-mfl/v1/NearestFacilities/{longitude}/{latitude}                     GET      Get all facilities by ownership id
+mfl/v1/NearestFacilities/{longitude}/{latitude}                     GET      Get facilities nearest to the users location using their location coordinates
 
 ```
 
