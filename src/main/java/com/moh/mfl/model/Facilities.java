@@ -16,12 +16,12 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  * @author Francis Chulu
  */
 @Entity
-@Table(name = "`MFL_facility`")
+@Table(name = "MFL_facility")
 @EntityListeners(AuditingEntityListener.class)
 public class Facilities implements Serializable {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE)
     private Long id;
     @NotBlank
     @Column(name = "name")
@@ -86,6 +86,10 @@ public class Facilities implements Serializable {
     private String district;
     @Column(name = "province")
     private String province;
+    @Column(name = "number_of_paramedics")
+    private Integer numberOfParamedics;
+    @Column(name = "number_of_midwives")
+    private Integer numberOfMidwives;
 
     public Facilities() {
     }
@@ -538,5 +542,35 @@ public class Facilities implements Serializable {
     public void setProvince(String province) {
         this.province = province;
     }
+
+    /**
+     * @return the numberOfParamedics
+     */
+    public Integer getNumberOfParamedics() {
+        return numberOfParamedics;
+    }
+
+    /**
+     * @param numberOfParamedics the numberOfParamedics to set
+     */
+    public void setNumberOfParamedics(Integer numberOfParamedics) {
+        this.numberOfParamedics = numberOfParamedics;
+    }
+
+    /**
+     * @return the numberOfMidwives
+     */
+    public Integer getNumberOfMidwives() {
+        return numberOfMidwives;
+    }
+
+    /**
+     * @param numberOfMidwives the numberOfMidwives to set
+     */
+    public void setNumberOfMidwives(Integer numberOfMidwives) {
+        this.numberOfMidwives = numberOfMidwives;
+    }
+
+    
 
 }

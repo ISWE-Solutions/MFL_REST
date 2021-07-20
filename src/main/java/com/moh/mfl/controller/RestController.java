@@ -4,12 +4,16 @@ import com.moh.mfl.model.Constituencies;
 import com.moh.mfl.model.DistrictTypes;
 import com.moh.mfl.model.Districts;
 import com.moh.mfl.model.Facilities;
+import com.moh.mfl.model.FacilityByProvince;
+import com.moh.mfl.model.FacilityTypeCounts;
 import com.moh.mfl.model.FacilityTypes;
 import com.moh.mfl.model.OperationStatus;
 import com.moh.mfl.model.Ownership;
 import com.moh.mfl.model.Provinces;
 import com.moh.mfl.model.Wards;
 import com.moh.mfl.repository.ConstituenciesRepository;
+import com.moh.mfl.repository.CountFacilitiesByProvinceRepository;
+import com.moh.mfl.repository.CountFacilitiesByTypeRepository;
 import com.moh.mfl.repository.DistrictTypesRepository;
 import com.moh.mfl.repository.DistrictsRepository;
 import com.moh.mfl.repository.FacilitiesRepository;
@@ -40,6 +44,10 @@ public class RestController {
     FacilitiesRepository facilitiesRepository;
     private Facilities facilities;
     @Autowired
+    CountFacilitiesByProvinceRepository countFacilitiesByProvinceRepository;
+    @Autowired
+    CountFacilitiesByTypeRepository countFacilitiesByTypeRepository;
+    @Autowired
     OwnershipRepository ownershipRepository;
     @Autowired
     OperationStatusRepository operationStatusRepository;
@@ -61,6 +69,66 @@ public class RestController {
     @Autowired
     ProvincesRepository provincesRepository;
     private Provinces provinces;
+
+    /**
+     * Operating Facilities by type counts endpoint
+     *
+     * @return ResponseEntity
+     */
+    @GetMapping(value = "/OperatingFacilityType", produces = "application/json")
+    public ResponseEntity<?> FacilityByType() {
+        try {
+            List<FacilityTypeCounts> list = countFacilitiesByTypeRepository.findByFacilityTypeId();
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "No Facilities by type were found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Operating Facilities by province counts endpoint
+     *
+     * @return ResponseEntity
+     */
+    @GetMapping(value = "/OperatingFacilityProvince", produces = "application/json")
+    public ResponseEntity<?> FacilityByProvince() {
+        try {
+            List<FacilityByProvince> list = countFacilitiesByProvinceRepository.findByDistrictId();
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "No Facilities by type were found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Get 10 nearest Facilities by longitude and latitude endpoint
+     *
+     * @param longitude
+     * @param latitude
+     * @return ResponseEntity
+     */
+    @GetMapping(value = "/NearestFacilities/{longitude}/{latitude}", produces = "application/json")
+    public ResponseEntity<?> Facility(@PathVariable String longitude, @PathVariable String latitude) {
+        //try {
+            List<Facilities> list = facilitiesRepository.findByLongitudeAndLatitude(longitude, latitude);
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "There are no Facilities near "
+                        + "coordinates(" + longitude + "," + latitude + ")!", ""), HttpStatus.NOT_FOUND);
+            }
+        //} catch (Exception ex) {
+        //    return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+      //  }
+    }
 
     /**
      * Facility by name endpoint

@@ -41,7 +41,7 @@ Setup and Installation steps
    Windows
    ----------------------------------------
      * For Windows you can use the "Windows Service Wrapper".
-     * Please refer Winsw documentation for more details: [Winsw documentation](https://repo.jenkins-ci.org/releases/com/sun/winsw/winsw/)
+     * Please refer to Winsw documentation for more details: [Winsw documentation](https://repo.jenkins-ci.org/releases/com/sun/winsw/winsw/)
 ```
 
 
