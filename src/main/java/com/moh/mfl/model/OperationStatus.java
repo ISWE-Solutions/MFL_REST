@@ -23,10 +23,12 @@ public class OperationStatus implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
     @NotBlank
     @Column(name = "name")
     private String name;
     private String description;
+    private Long shared_id;
 
     public OperationStatus() {
     }
@@ -71,5 +73,19 @@ public class OperationStatus implements Serializable {
      */
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    /**
+     * @return the shared_id
+     */
+    public Long getShared_id() {
+        return shared_id;
+    }
+
+    /**
+     * @param shared_id the shared_id to set
+     */
+    public void setShared_id(Long shared_id) {
+        this.shared_id = shared_id;
     }
 }

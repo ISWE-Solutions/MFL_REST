@@ -1,6 +1,6 @@
 package com.moh.mfl.repository;
 
-import com.moh.mfl.model.DistrictTypes;
+import com.moh.mfl.model.Districttypes;
 import com.moh.mfl.model.OperationStatus;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;

@@ -23,7 +23,7 @@ public class Districts implements Serializable {
     //@JsonIgnore
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private Integer id;
     @NotBlank
     @Column(name = "name")
     private String name;
@@ -48,14 +48,14 @@ public class Districts implements Serializable {
     /**
      * @return the id
      */
-    public Long getId() {
+    public Integer getId() {
         return id;
     }
 
     /**
      * @param id the id to set
      */
-    public void setId(Long id) {
+    public void setId(Integer id) {
         this.id = id;
     }
 

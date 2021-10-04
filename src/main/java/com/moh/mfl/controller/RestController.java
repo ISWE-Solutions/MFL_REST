@@ -1,7 +1,7 @@
 package com.moh.mfl.controller;
 
 import com.moh.mfl.model.Constituencies;
-import com.moh.mfl.model.DistrictTypes;
+import com.moh.mfl.model.Districttypes;
 import com.moh.mfl.model.Districts;
 import com.moh.mfl.model.Facilities;
 import com.moh.mfl.model.FacilityByProvince;
@@ -65,7 +65,7 @@ public class RestController {
     private Districts districts;
     @Autowired
     DistrictTypesRepository districtTypesRepository;
-    private DistrictTypes districtType;
+    private Districttypes districtType;
     @Autowired
     ProvincesRepository provincesRepository;
     private Provinces provinces;
@@ -117,7 +117,7 @@ public class RestController {
      */
     @GetMapping(value = "/NearestFacilities/{longitude}/{latitude}", produces = "application/json")
     public ResponseEntity<?> Facility(@PathVariable String longitude, @PathVariable String latitude) {
-        //try {
+        try {
             List<Facilities> list = facilitiesRepository.findByLongitudeAndLatitude(longitude, latitude);
             if (!list.isEmpty()) {
                 return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
@@ -125,9 +125,9 @@ public class RestController {
                 return new ResponseEntity(new ApiResponse(false, "There are no Facilities near "
                         + "coordinates(" + longitude + "," + latitude + ")!", ""), HttpStatus.NOT_FOUND);
             }
-        //} catch (Exception ex) {
-        //    return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
-      //  }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
@@ -144,6 +144,34 @@ public class RestController {
                 return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
             } else {
                 return new ResponseEntity(new ApiResponse(false, "Facility: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping(value = "/Facilities/{name}/{district_id}", produces = "application/json")
+    public ResponseEntity<?> Facility(@PathVariable String name, Long district_id) {
+        try {
+            List<Facilities> list = facilitiesRepository.findByNameAndDistrictId(name, district_id);
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "Facility: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping(value = "/FacilityByService/{serviceName}", produces = "application/json")
+    public ResponseEntity<?> FacilityByService(@PathVariable String serviceName) {
+        try {
+            List<Facilities> list = facilitiesRepository.findByName(serviceName);
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "Facility: " + serviceName + " was not found!", ""), HttpStatus.NOT_FOUND);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -211,7 +239,7 @@ public class RestController {
         try {
             Optional<Districts> d = districtsRepository.findById(Long.valueOf(district_id));
             if (d.isPresent()) {
-                List<Facilities> list = facilitiesRepository.findByDistrictId(d.get().getId());
+                List<Facilities> list = facilitiesRepository.findByDistrictId(Long.valueOf(d.get().getId()));
                 if (!list.isEmpty()) {
                     return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
                 } else {
@@ -477,7 +505,7 @@ public class RestController {
         try {
             Optional<Districts> d = districtsRepository.findById(Long.valueOf(district_id));
             if (d.isPresent()) {
-                List<Wards> list = wardsRepository.findByDistrictId(d.get().getId());
+                List<Wards> list = wardsRepository.findByDistrictId(Long.valueOf(d.get().getId()));
                 if (!list.isEmpty()) {
                     return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
                 } else {
@@ -547,7 +575,7 @@ public class RestController {
         try {
             Optional<Districts> d = districtsRepository.findById(Long.valueOf(district_id));
             if (d.isPresent()) {
-                List<Constituencies> list = constituenciesRepository.findByDistrictId(d.get().getId());
+                List<Constituencies> list = constituenciesRepository.findByDistrictId(Long.valueOf(d.get().getId()));
                 if (!list.isEmpty()) {
                     return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
                 } else {
@@ -583,6 +611,27 @@ public class RestController {
     }
 
     /**
+     * District by id endpoint
+     *
+     * @param id
+     * @return ResponseEntity
+     */
+    @GetMapping(value = "/Districts/{id}", produces = "application/json")
+    public ResponseEntity<?> District(@PathVariable Long id) {
+        try {
+            Optional<Districts> list = districtsRepository.findById(id);
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "District by id: " + id + " was not found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+    }
+
+    /**
      * All district types endpoint
      *
      * @return ResponseEntity
@@ -590,7 +639,7 @@ public class RestController {
     @GetMapping(value = "/Districttypes", produces = "application/json")
     public ResponseEntity<?> Districttypes() {
         try {
-            List<DistrictTypes> list = districtTypesRepository.findAll();
+            List<Districttypes> list = districtTypesRepository.findAll();
             if (!list.isEmpty()) {
                 return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
             } else {
@@ -611,7 +660,7 @@ public class RestController {
     @GetMapping(value = "/Districttypes/{name}", produces = "application/json")
     public ResponseEntity<?> Districttype(@PathVariable String name) {
         try {
-            List<DistrictTypes> list = districtTypesRepository.findByName(name);
+            List<Districttypes> list = districtTypesRepository.findByName(name);
             if (!list.isEmpty()) {
                 return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
             } else {
@@ -632,9 +681,9 @@ public class RestController {
     @GetMapping(value = "/Districttypes/{districttype_id}/Districts", produces = "application/json")
     public ResponseEntity<?> DistrictsByDistricttypeId(@PathVariable String districttype_id) {
         try {
-            Optional<DistrictTypes> p = districtTypesRepository.findById(Long.valueOf(districttype_id));
+            Optional<Districttypes> p = districtTypesRepository.findById(Long.valueOf(districttype_id));
             if (p.isPresent()) {
-                List<Districts> list = districtsRepository.findByDistrictTypeId(p.get().getId());
+                List<Districts> list = districtsRepository.findByDistrictTypeId(Long.valueOf(p.get().getId()));
                 if (!list.isEmpty()) {
                     return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
                 } else {
@@ -659,7 +708,7 @@ public class RestController {
         try {
             Optional<Provinces> p = provincesRepository.findById(Long.valueOf(province_id));
             if (p.isPresent()) {
-                List<Districts> list = districtsRepository.findByProvinceId(p.get().getId());
+                List<Districts> list = districtsRepository.findByProvinceId(Long.valueOf(p.get().getId()));
                 if (!list.isEmpty()) {
                     return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
                 } else {

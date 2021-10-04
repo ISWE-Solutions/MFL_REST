@@ -42,6 +42,20 @@ public interface DistrictsRepository extends JpaRepository<Districts, Long> {
     /**
      *
      * @param name
+     * @return optional
+     */
+    @Query(value = "SELECT gd.id,gd.name,gd.population,gd.pop_density,gd.area_sq_km,\n"
+            + "ST_AsGeoJSON(gd.geom) as geom,gdt.name as districtType,gp.name as province\n"
+            + "from geography_district gd \n"
+            + "LEFT JOIN geography_districttype gdt ON \n"
+            + "gd.district_type_id=gdt.id\n"
+            + "LEFT JOIN geography_province gp ON\n"
+            + "gd.province_id=gp.id WHERE gd.name ILIKE %:name% limit 1", nativeQuery = true)
+    Districts getDistrict(@Param("name") String name);
+
+    /**
+     *
+     * @param name
      * @return list
      */
     @Query(value = "SELECT gd.id,gd.name,gd.population,gd.pop_density,gd.area_sq_km,\n"

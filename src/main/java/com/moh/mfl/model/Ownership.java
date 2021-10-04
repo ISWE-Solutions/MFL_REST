@@ -26,6 +26,7 @@ public class Ownership implements Serializable {
     @NotBlank
     @Column(name = "name")
     private String name;
+    private Long shared_id;
 
     public Ownership() {
     }
@@ -56,6 +57,19 @@ public class Ownership implements Serializable {
      */
     public void setName(String name) {
         this.name = name;
+    }
+    /**
+     * @return the shared_id
+     */
+    public Long getShared_id() {
+        return shared_id;
+    }
+
+    /**
+     * @param shared_id the shared_id to set
+     */
+    public void setShared_id(Long shared_id) {
+        this.shared_id = shared_id;
     }
 
 }

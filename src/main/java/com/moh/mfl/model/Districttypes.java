@@ -18,7 +18,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 @Entity
 @Table(name = "geography_districttype")
 @EntityListeners(AuditingEntityListener.class)
-public class DistrictTypes implements Serializable {
+public class Districttypes implements Serializable {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,7 +27,7 @@ public class DistrictTypes implements Serializable {
     @Column(name = "name")
     private String name;
 
-    public DistrictTypes() {
+    public Districttypes() {
     }
 
     /**
