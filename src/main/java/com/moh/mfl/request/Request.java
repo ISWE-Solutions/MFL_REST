@@ -18,8 +18,8 @@ public class Request implements Serializable {
 
     @NotBlank(message = "District is required")
     private String district;
-    @NotBlank(message = "Name is required")
-    private String name;
+    @NotBlank(message = "Facility name is required")
+    private String facilityName;
     @NotBlank(message = "Operational status is required")
     private Integer operationalStatus;
     @NotBlank(message = "Facility type is required")
@@ -30,10 +30,20 @@ public class Request implements Serializable {
     private String hpczCode;
     @NotNull(message = "Ownership is required")
     private Integer ownership;
-    @NotNull(message = "Facility location is required")
+    @NotNull(message = "Facility location is required (1=Rural,2=Urban)")
     private Integer FacilityLocation;
     @NotNull(message = "Accessibility is required")
     private String accessibility;
+    private String email;
+    private String mobileNumber;
+    private String telephone;
+    private String postalAddress;
+    private String plotNo;
+    private String street;
+    private String town;
+    private String fax;
+    private String physicalAddress;
+    private String services;
 
     /**
      * @return the district
@@ -47,20 +57,6 @@ public class Request implements Serializable {
      */
     public void setDistrict(String district) {
         this.district = district;
-    }
-
-    /**
-     * @return the name
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * @param name the name to set
-     */
-    public void setName(String name) {
-        this.name = name;
     }
 
     /**
@@ -159,6 +155,160 @@ public class Request implements Serializable {
      */
     public void setAccessibility(String accessibility) {
         this.accessibility = accessibility;
+    }
+
+    /**
+     * @return the facilityName
+     */
+    public String getFacilityName() {
+        return facilityName;
+    }
+
+    /**
+     * @param facilityName the facilityName to set
+     */
+    public void setFacilityName(String facilityName) {
+        this.facilityName = facilityName;
+    }
+
+    /**
+     * @return the email
+     */
+    public String getEmail() {
+        return email;
+    }
+
+    /**
+     * @param email the email to set
+     */
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    /**
+     * @return the mobileNumber
+     */
+    public String getMobileNumber() {
+        return mobileNumber;
+    }
+
+    /**
+     * @param mobileNumber the mobileNumber to set
+     */
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
+    }
+
+    /**
+     * @return the telephone
+     */
+    public String getTelephone() {
+        return telephone;
+    }
+
+    /**
+     * @param telephone the telephone to set
+     */
+    public void setTelephone(String telephone) {
+        this.telephone = telephone;
+    }
+
+    /**
+     * @return the postalAddress
+     */
+    public String getPostalAddress() {
+        return postalAddress;
+    }
+
+    /**
+     * @param postalAddress the postalAddress to set
+     */
+    public void setPostalAddress(String postalAddress) {
+        this.postalAddress = postalAddress;
+    }
+
+    /**
+     * @return the plotNo
+     */
+    public String getPlotNo() {
+        return plotNo;
+    }
+
+    /**
+     * @param plotNo the plotNo to set
+     */
+    public void setPlotNo(String plotNo) {
+        this.plotNo = plotNo;
+    }
+
+    /**
+     * @return the street
+     */
+    public String getStreet() {
+        return street;
+    }
+
+    /**
+     * @param street the street to set
+     */
+    public void setStreet(String street) {
+        this.street = street;
+    }
+
+    /**
+     * @return the town
+     */
+    public String getTown() {
+        return town;
+    }
+
+    /**
+     * @param town the town to set
+     */
+    public void setTown(String town) {
+        this.town = town;
+    }
+
+    /**
+     * @return the fax
+     */
+    public String getFax() {
+        return fax;
+    }
+
+    /**
+     * @param fax the fax to set
+     */
+    public void setFax(String fax) {
+        this.fax = fax;
+    }
+
+    /**
+     * @return the physicalAddress
+     */
+    public String getPhysicalAddress() {
+        return physicalAddress;
+    }
+
+    /**
+     * @param physicalAddress the physicalAddress to set
+     */
+    public void setPhysicalAddress(String physicalAddress) {
+        this.physicalAddress = physicalAddress;
+    }
+
+    /**
+     * @return the services
+     */
+    public String getServices() {
+        return services;
+    }
+
+    /**
+     * @param services the services to set
+     */
+    public void setServices(String services) {
+        this.services = services;
     }
 
 }

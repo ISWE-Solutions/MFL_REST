@@ -8,8 +8,11 @@ import com.moh.mfl.model.Districts;
 import com.moh.mfl.model.Facilities;
 import com.moh.mfl.model.Facility;
 import com.moh.mfl.model.FacilitySave;
+import com.moh.mfl.model.FacilityServices;
 import com.moh.mfl.model.FacilityTypes;
 import com.moh.mfl.model.Provinces;
+import com.moh.mfl.model.ServiceArea;
+import com.moh.mfl.model.ServiceScope;
 import com.moh.mfl.model.Wards;
 import com.moh.mfl.repository.ApiUserRepo;
 import com.moh.mfl.repository.ConstituenciesRepository;
@@ -20,10 +23,13 @@ import com.moh.mfl.repository.DistrictsRepository;
 import com.moh.mfl.repository.FacilitiesRepository;
 import com.moh.mfl.repository.FacilityRepository;
 import com.moh.mfl.repository.FacilitySaveRepository;
+import com.moh.mfl.repository.FacilityServicesRepository;
 import com.moh.mfl.repository.FacilityTypesRepository;
 import com.moh.mfl.repository.OperationStatusRepository;
 import com.moh.mfl.repository.OwnershipRepository;
 import com.moh.mfl.repository.ProvincesRepository;
+import com.moh.mfl.repository.ServiceAreaRepository;
+import com.moh.mfl.repository.ServiceScopeRepository;
 import com.moh.mfl.repository.WardsRepository;
 import com.moh.mfl.request.Request;
 import com.moh.mfl.response.ApiResponse;
@@ -85,10 +91,18 @@ public class MFLRestController {
     @Autowired
     FacilitySaveRepository facilityRepository;
     FacilitySave facility;
+    @Autowired
+    ServiceAreaRepository serviceAreaRepository;
+    @Autowired
+    ServiceScopeRepository serviceScopeRepository;
+    @Autowired
+    FacilityServicesRepository facilityServicesRepository;
+    //FacilityServices facilityServices;
 
     public MFLRestController() {
         this.config = new SecurityConfig();
         this.facility = new FacilitySave();
+        //this.facilityServices = new FacilityServices();
     }
 
     @PostMapping(value = {"/facility/push"}, consumes = {"application/json"}, produces = {"application/json"})
@@ -109,26 +123,61 @@ public class MFLRestController {
                     if (this.config.verifyKey(password + user.get().getAuthKey(), user.get().getPassword())) {
                         districts = districtsRepository.getDistrict(request.getDistrict());
                         if (districts != null) {
-                            facility.setDistrict(districts.getId());
-                            facility.setName(request.getName());
-                            facility.setOwnershipType(String.valueOf(2));
-                            facility.setLocation(request.getFacilityLocation());
-                            facility.setAccesibility(request.getAccessibility());
-                            facility.setOwnership(request.getOwnership());
-                            facility.setOperationalStatus(request.getOperationalStatus());
-                            facility.setMobilityStatus(request.getMobilityStatus());
-                            facility.setHpczCode(request.getHpczCode());
-                            facility.setStatus(1);
-                            facility.setType(request.getFacilityType());
-                            java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
-                            facility.setDateCreated(date);
-                            
-                            FacilitySave result = this.facilityRepository.save(facility);
-                            Integer id = result.getId();
-                            if (id != null && id > 0) {
-                                resp = new ResponseEntity(new ApiResponse(true, "success", id), HttpStatus.ACCEPTED);
+                            //Check if facility exists already
+                            Optional<FacilitySave> r = facilityRepository.findByFacilityName(request.getFacilityName());
+                            if (!r.isPresent()) {
+                                facility.setDistrict(districts.getId());
+                                facility.setFacilityName(request.getFacilityName());
+                                facility.setOwnershipType(String.valueOf(2));
+                                facility.setLocation(request.getFacilityLocation());
+                                facility.setAccesibility(request.getAccessibility());
+                                facility.setOwnership(request.getOwnership());
+                                facility.setOperationalStatus(request.getOperationalStatus());
+                                facility.setMobilityStatus(request.getMobilityStatus());
+                                facility.setHpczCode(request.getHpczCode());
+                                facility.setStatus(1);
+                                facility.setType(request.getFacilityType());
+                                facility.setEmail(request.getEmail());
+                                facility.setMobileNumber(request.getMobileNumber());
+                                facility.setTelephone(request.getTelephone());
+                                facility.setTown(request.getTown());
+                                facility.setStreet(request.getStreet());
+                                facility.setFax(request.getFax());
+                                facility.setPlotNo(request.getPlotNo());
+                                facility.setPhysicalAddress(request.getPhysicalAddress());
+                                facility.setPostalAddress(request.getPostalAddress());
+                                java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
+                                facility.setDateCreated(date);
+                                FacilitySave result = this.facilityRepository.save(facility);
+                                Integer id = result.getId();
+                                if (id != null && id > 0) {
+                                    //Lets get the services parameter to get the shared id
+                                    String[] services = request.getServices().split(",");
+                                    if (services.length > 0) {
+                                        for (String service : services) {
+                                            //Check if service area exist
+                                            Optional<ServiceScope> serviceScope = serviceScopeRepository.findBySharedId(Integer.parseInt(service));
+                                            if (serviceScope.isPresent()) {
+                                                //Check if facility service exist already
+                                                Optional<FacilityServices> fs = facilityServicesRepository.findByFacilityIdAndServiceId(id, serviceScope.get().getId());
+                                                if (!fs.isPresent()) {
+                                                    //We save the service now
+                                                    FacilityServices facilityServices = new FacilityServices();
+                                                    facilityServices.setFacilityId(id);
+                                                    facilityServices.setServiceAreaId(serviceScope.get().getCategoryId());
+                                                    facilityServices.setServiceId(serviceScope.get().getId());
+                                                    facilityServicesRepository.save(facilityServices);
+                                                }
+                                            }
+                                        }
+                                    }
+                                    resp = new ResponseEntity(new ApiResponse(true, "success", id), HttpStatus.ACCEPTED);
+
+                                } else {
+                                    resp = new ResponseEntity(new ApiResponse(false, "Facility could not be saved. Please try again!", ""), HttpStatus.INTERNAL_SERVER_ERROR);
+                                }
                             } else {
-                                resp = new ResponseEntity(new ApiResponse(false, "Facility could not be saved. Please try again!", ""), HttpStatus.INTERNAL_SERVER_ERROR);
+                                resp = new ResponseEntity(new ApiResponse(false, "Facility with facility name:" + request.getFacilityName() + " exists already!", ""), HttpStatus.NOT_ACCEPTABLE);
                             }
                         } else {
                             resp = new ResponseEntity(new ApiResponse(false, "District:" + request.getDistrict() + " not found on the MFL!", ""), HttpStatus.NOT_FOUND);

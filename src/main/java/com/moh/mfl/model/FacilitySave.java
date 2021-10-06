@@ -13,7 +13,6 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.Lob;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
@@ -57,7 +56,7 @@ public class FacilitySave implements Serializable {
     @NotNull
     @Size(min = 1, max = 2147483647)
     @Column(name = "name")
-    private String name;
+    private String facilityName;
     @Size(max = 2147483647)
     @Column(name = "catchment_population_head_count")
     private String catchmentPopulationHeadCount;
@@ -103,6 +102,24 @@ public class FacilitySave implements Serializable {
     private Integer ownership;
     @Column(name = "operational_status")
     private Integer operationalStatus;
+    @Column(name = "email")
+    private String email;
+    @Column(name = "mobile")
+    private String mobileNumber;
+    @Column(name = "phone")
+    private String telephone;
+    @Column(name = "postal_address")
+    private String postalAddress;
+    @Column(name = "plot_no")
+    private String plotNo;
+    @Column(name = "street")
+    private String street;
+    @Column(name = "town")
+    private String town;
+    @Column(name = "fax")
+    private String fax;
+    @Column(name = "physical_address")
+    private String physicalAddress;
 
     public FacilitySave() {
     }
@@ -175,14 +192,6 @@ public class FacilitySave implements Serializable {
         this.disaCode = disaCode;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public void setName(String name) {
-        this.name = name;
-    }
-
     public String getCatchmentPopulationHeadCount() {
         return catchmentPopulationHeadCount;
     }
@@ -247,8 +256,6 @@ public class FacilitySave implements Serializable {
         this.longitude = longitude;
     }
 
-   
-
     public Integer getStatus() {
         return status;
     }
@@ -257,7 +264,6 @@ public class FacilitySave implements Serializable {
         this.status = status;
     }
 
-   
     public Date getDateCreated() {
         return dateCreated;
     }
@@ -266,7 +272,6 @@ public class FacilitySave implements Serializable {
         this.dateCreated = dateCreated;
     }
 
-
     public Integer getType() {
         return type;
     }
@@ -274,7 +279,6 @@ public class FacilitySave implements Serializable {
     public void setType(Integer type) {
         this.type = type;
     }
-
 
     /**
      * @return the location
@@ -330,6 +334,146 @@ public class FacilitySave implements Serializable {
      */
     public void setOperationalStatus(Integer operationalStatus) {
         this.operationalStatus = operationalStatus;
+    }
+
+    /**
+     * @return the facilityName
+     */
+    public String getFacilityName() {
+        return facilityName;
+    }
+
+    /**
+     * @param facilityName the facilityName to set
+     */
+    public void setFacilityName(String facilityName) {
+        this.facilityName = facilityName;
+    }
+
+    /**
+     * @return the email
+     */
+    public String getEmail() {
+        return email;
+    }
+
+    /**
+     * @param email the email to set
+     */
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    /**
+     * @return the mobileNumber
+     */
+    public String getMobileNumber() {
+        return mobileNumber;
+    }
+
+    /**
+     * @param mobileNumber the mobileNumber to set
+     */
+    public void setMobileNumber(String mobileNumber) {
+        this.mobileNumber = mobileNumber;
+    }
+
+    /**
+     * @return the telephone
+     */
+    public String getTelephone() {
+        return telephone;
+    }
+
+    /**
+     * @param telephone the telephone to set
+     */
+    public void setTelephone(String telephone) {
+        this.telephone = telephone;
+    }
+
+    /**
+     * @return the postalAddress
+     */
+    public String getPostalAddress() {
+        return postalAddress;
+    }
+
+    /**
+     * @param postalAddress the postalAddress to set
+     */
+    public void setPostalAddress(String postalAddress) {
+        this.postalAddress = postalAddress;
+    }
+
+    /**
+     * @return the plotNo
+     */
+    public String getPlotNo() {
+        return plotNo;
+    }
+
+    /**
+     * @param plotNo the plotNo to set
+     */
+    public void setPlotNo(String plotNo) {
+        this.plotNo = plotNo;
+    }
+
+    /**
+     * @return the street
+     */
+    public String getStreet() {
+        return street;
+    }
+
+    /**
+     * @param street the street to set
+     */
+    public void setStreet(String street) {
+        this.street = street;
+    }
+
+    /**
+     * @return the town
+     */
+    public String getTown() {
+        return town;
+    }
+
+    /**
+     * @param town the town to set
+     */
+    public void setTown(String town) {
+        this.town = town;
+    }
+
+    /**
+     * @return the fax
+     */
+    public String getFax() {
+        return fax;
+    }
+
+    /**
+     * @param fax the fax to set
+     */
+    public void setFax(String fax) {
+        this.fax = fax;
+    }
+
+    /**
+     * @return the physicalAddress
+     */
+    public String getPhysicalAddress() {
+        return physicalAddress;
+    }
+
+    /**
+     * @param physicalAddress the physicalAddress to set
+     */
+    public void setPhysicalAddress(String physicalAddress) {
+        this.physicalAddress = physicalAddress;
     }
 
 }

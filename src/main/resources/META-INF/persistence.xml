@@ -12,6 +12,9 @@
     <class>com.moh.mfl.model.Districttypes</class>
     <class>com.moh.mfl.model.Provinces</class>
     <class>com.moh.mfl.model.ApiUsers</class>
+    <class>com.moh.mfl.model.ServiceArea</class>
+    <class>com.moh.mfl.model.ServiceScope</class>
+    <class>com.moh.mfl.model.FacilityServices</class>
     <properties>
       <property name="javax.persistence.jdbc.url" value="jdbc:postgresql://localhost:5432/postgres"/>
       <property name="javax.persistence.jdbc.user" value="postgres"/>

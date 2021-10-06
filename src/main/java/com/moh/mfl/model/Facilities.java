@@ -16,7 +16,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  * @author Francis Chulu
  */
 @Entity
-@Table(name = "MFL_facility")
+@Table(name = "facility")
 @EntityListeners(AuditingEntityListener.class)
 public class Facilities implements Serializable {
 
@@ -26,15 +26,17 @@ public class Facilities implements Serializable {
     @NotBlank
     @Column(name = "name")
     private String name;
-    @Column(name = "DHIS2_UID")
-    private String dhis2Uid;
-    @Column(name = "HMIS_code")
-    private String hmisUid;
-    @Column(name = "smartcare_GUID")
-    private String smartcareGuid;
-    @Column(name = "eLMIS_ID")
-    private String elmisId;
-    @Column(name = "iHRIS_ID")
+    @Column(name = "hims_code")
+    private String himsCode;
+    @Column(name = "smartcare_code")
+    private String smartcareCode;
+    @Column(name = "elmis_code")
+    private String elmisCode;
+    @Column(name = "hpcz_code")
+    private String hpczCode;
+    @Column(name = "disa_code")
+    private String disaCode;
+
     private String ihrisId;
     @Column(name = "ownership")
     private String ownersip;
@@ -122,61 +124,7 @@ public class Facilities implements Serializable {
         this.name = name;
     }
 
-    /**
-     * @return the dhis2Uid
-     */
-    public String getDhis2Uid() {
-        return dhis2Uid;
-    }
-
-    /**
-     * @param dhis2Uid the dhis2Uid to set
-     */
-    public void setDhis2Uid(String dhis2Uid) {
-        this.dhis2Uid = dhis2Uid;
-    }
-
-    /**
-     * @return the hmisUid
-     */
-    public String getHmisUid() {
-        return hmisUid;
-    }
-
-    /**
-     * @param hmisUid the hmisUid to set
-     */
-    public void setHmisUid(String hmisUid) {
-        this.hmisUid = hmisUid;
-    }
-
-    /**
-     * @return the smartcareGuid
-     */
-    public String getSmartcareGuid() {
-        return smartcareGuid;
-    }
-
-    /**
-     * @param smartcareGuid the smartcareGuid to set
-     */
-    public void setSmartcareGuid(String smartcareGuid) {
-        this.smartcareGuid = smartcareGuid;
-    }
-
-    /**
-     * @return the elmisId
-     */
-    public String getElmisId() {
-        return elmisId;
-    }
-
-    /**
-     * @param elmisId the elmisId to set
-     */
-    public void setElmisId(String elmisId) {
-        this.elmisId = elmisId;
-    }
+    
 
     /**
      * @return the ihrisId
@@ -571,6 +519,74 @@ public class Facilities implements Serializable {
         this.numberOfMidwives = numberOfMidwives;
     }
 
-    
+    /**
+     * @return the himsCode
+     */
+    public String getHimsCode() {
+        return himsCode;
+    }
+
+    /**
+     * @param himsCode the himsCode to set
+     */
+    public void setHimsCode(String himsCode) {
+        this.himsCode = himsCode;
+    }
+
+    /**
+     * @return the smartcareCode
+     */
+    public String getSmartcareCode() {
+        return smartcareCode;
+    }
+
+    /**
+     * @param smartcareCode the smartcareCode to set
+     */
+    public void setSmartcareCode(String smartcareCode) {
+        this.smartcareCode = smartcareCode;
+    }
+
+    /**
+     * @return the elmisCode
+     */
+    public String getElmisCode() {
+        return elmisCode;
+    }
+
+    /**
+     * @param elmisCode the elmisCode to set
+     */
+    public void setElmisCode(String elmisCode) {
+        this.elmisCode = elmisCode;
+    }
+
+    /**
+     * @return the hpczCode
+     */
+    public String getHpczCode() {
+        return hpczCode;
+    }
+
+    /**
+     * @param hpczCode the hpczCode to set
+     */
+    public void setHpczCode(String hpczCode) {
+        this.hpczCode = hpczCode;
+    }
+
+    /**
+     * @return the disaCode
+     */
+    public String getDisaCode() {
+        return disaCode;
+    }
+
+    /**
+     * @param disaCode the disaCode to set
+     */
+    public void setDisaCode(String disaCode) {
+        this.disaCode = disaCode;
+    }
 
 }
