@@ -101,7 +101,7 @@ public class MFLRestController {
 
     public MFLRestController() {
         this.config = new SecurityConfig();
-        this.facility = new FacilitySave();
+
         //this.facilityServices = new FacilityServices();
     }
 
@@ -126,6 +126,7 @@ public class MFLRestController {
                             //Check if facility exists already
                             Optional<FacilitySave> r = facilityRepository.findByFacilityName(request.getFacilityName());
                             if (!r.isPresent()) {
+                                facility = new FacilitySave();
                                 facility.setDistrict(districts.getId());
                                 facility.setFacilityName(request.getFacilityName());
                                 facility.setOwnershipType(String.valueOf(2));
@@ -171,6 +172,7 @@ public class MFLRestController {
                                             }
                                         }
                                     }
+
                                     resp = new ResponseEntity(new ApiResponse(true, "success", id), HttpStatus.ACCEPTED);
 
                                 } else {
