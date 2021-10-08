@@ -147,6 +147,8 @@ public class MFLRestController {
                                 facility.setPlotNo(request.getPlotNo());
                                 facility.setPhysicalAddress(request.getPhysicalAddress());
                                 facility.setPostalAddress(request.getPostalAddress());
+                                facility.setLatitude(request.getLatitude());
+                                facility.setLongitude(request.getLongitude());
                                 java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
                                 facility.setDateCreated(date);
                                 FacilitySave result = this.facilityRepository.save(facility);
