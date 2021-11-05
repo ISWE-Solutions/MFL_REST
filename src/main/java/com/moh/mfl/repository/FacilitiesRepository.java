@@ -43,7 +43,8 @@ public interface FacilitiesRepository extends JpaRepository<Facilities, Long> {
             + "LEFT JOIN \"ownership\" ow ON f.ownership = ow.id\n"
             + "LEFT JOIN \"operations_status\" os\n"
             + "ON f.operational_status = os.id LEFT JOIN \"geography_district\" d ON f.district_id = d.id\n"
-            + "LEFT JOIN \"geography_province\" p ON d.province_id = p.id\n"
+            + "LEFT JOIN \"geography_province\" p ON d.province_id = p.id "
+            + "WHERE f.longitude IS NOT NULL AND f.longitude !='' AND f.latitude IS NOT NULL AND  f.latitude !=''\n"
             + "ORDER BY f.geom <-> ST_GeomFromText ('POINT(' ||:lng || ' ' || :lat ||')', 4326)\n"
             //+ "WHERE ST_DWithin(f.geom, ST_GeogFromText('POINT(' ||:lng ||' ' || :lat ||')'), 10000, false)\n"
             + "LIMIT 10",
