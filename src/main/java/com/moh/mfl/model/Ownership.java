@@ -16,7 +16,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  * @author Francis Chulu
  */
 @Entity
-@Table(name = "`MFL_ownership`")
+@Table(name = "`ownership`")
 @EntityListeners(AuditingEntityListener.class)
 public class Ownership implements Serializable {
 

@@ -13,11 +13,11 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface CountFacilitiesByProvinceRepository extends JpaRepository<FacilityByProvince, Long> {
 
-    @Query(value = "select count(f.id) as count,p.name as province from \"MFL_facility\" f\n"
-            + "LEFT JOIN \"MFL_operationstatus\" os ON f.operation_status_id=os.id\n"
+    @Query(value = "select count(f.id) as count,p.name as province from \"facility\" f\n"
+            + "LEFT JOIN \"operations_status\" os ON f.operational_status=os.id\n"
             + "LEFT JOIN \"geography_district\" d ON f.district_id=d.id\n"
             + "LEFT JOIN \"geography_province\" p ON d.province_id=p.id\n"
-            + "WHERE os.name='Operational'\n"
+            + "WHERE os.name='Functional'\n"
             + "group by province order by count DESC", nativeQuery = true)
     List<FacilityByProvince> findByDistrictId();
 

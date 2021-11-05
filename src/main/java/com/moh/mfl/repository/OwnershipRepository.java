@@ -19,6 +19,6 @@ public interface OwnershipRepository extends JpaRepository<Ownership, Long> {
      * @param name
      * @return list
      */
-    @Query(value = "SELECT * FROM \"MFL_ownership\" WHERE name ILIKE %:name% ORDER BY id ASC", nativeQuery = true)
+    @Query(value = "SELECT * FROM \"ownership\" WHERE name ILIKE %:name% ORDER BY id ASC", nativeQuery = true)
     List<Ownership> findByName(@Param("name") String name);
 }

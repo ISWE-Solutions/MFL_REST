@@ -20,6 +20,6 @@ public interface FacilityTypesRepository extends JpaRepository<FacilityTypes, Lo
      * @param name
      * @return list
      */
-    @Query(value = "SELECT * FROM \"MFL_facilitytype\" WHERE name ILIKE %:name% ORDER BY id ASC", nativeQuery = true)
+    @Query(value = "SELECT * FROM \"facility_types\" WHERE name ILIKE %:name% ORDER BY id ASC", nativeQuery = true)
     List<FacilityTypes> findByName(@Param("name") String name);
 }

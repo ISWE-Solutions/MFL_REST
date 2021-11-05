@@ -14,7 +14,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  * @author Francis Chulu
  */
 @Entity
-@Table(name = "MFL_facility")
+@Table(name = "facility")
 @EntityListeners(AuditingEntityListener.class)
 public class FacilityTypeCounts implements Serializable {
 

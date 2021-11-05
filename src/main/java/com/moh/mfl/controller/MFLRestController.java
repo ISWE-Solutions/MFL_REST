@@ -108,7 +108,7 @@ public class MFLRestController {
     @PostMapping(value = {"/facility/push"}, consumes = {"application/json"}, produces = {"application/json"})
     public ResponseEntity<?> facility(@Valid @RequestBody Request request, HttpServletRequest servletRequest) {
         ResponseEntity resp = null;
-//        try {
+        try {
         String authorizationHeader = servletRequest.getHeader("Authorization");
         if (authorizationHeader != null && authorizationHeader.toLowerCase().startsWith("basic")) {
             String base64Credentials = authorizationHeader.substring("Basic".length()).trim();
@@ -199,9 +199,9 @@ public class MFLRestController {
             resp = new ResponseEntity(new ApiResponse(false, "Invalid credentials provided!", ""), HttpStatus.BAD_REQUEST);
 
         }
-//        } catch (Exception ex) {
-//            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
-//        }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
         return resp;
 
     }

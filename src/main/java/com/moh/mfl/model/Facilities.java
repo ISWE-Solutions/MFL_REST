@@ -1,31 +1,38 @@
 package com.moh.mfl.model;
 
 import java.io.Serializable;
+import javax.persistence.Basic;
 import javax.persistence.Column;
 import javax.persistence.Entity;
-import javax.persistence.EntityListeners;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.PostLoad;
 import javax.persistence.Table;
-import javax.validation.constraints.NotBlank;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import javax.validation.constraints.Size;
 
 /**
  *
- * @author Francis Chulu
+ * @author chulu
  */
 @Entity
 @Table(name = "facility")
-@EntityListeners(AuditingEntityListener.class)
 public class Facilities implements Serializable {
 
+    private static final long serialVersionUID = 1L;
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE)
-    private Long id;
-    @NotBlank
-    @Column(name = "name")
-    private String name;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Basic(optional = false)
+    @Column(name = "id")
+    private Integer id;
+    @Column(name = "ward")
+    private String ward;
+    @Column(name = "constituency")
+    private String constituency;
+    @Column(name = "district")
+    private String district;
+    @Column(name = "province")
+    private String province;
     @Column(name = "hims_code")
     private String himsCode;
     @Column(name = "smartcare_code")
@@ -36,122 +43,354 @@ public class Facilities implements Serializable {
     private String hpczCode;
     @Column(name = "disa_code")
     private String disaCode;
+    @Column(name = "name")
+    private String name;
 
-    private String ihrisId;
-    @Column(name = "ownership")
-    private String ownersip;
+    @Column(name = "catchment_population_head_count")
+    private String catchmentPopulationHeadCount;
+
+    @Column(name = "catchment_population_cso")
+    private String catchmentPopulationCso;
+
+    @Column(name = "number_of_households")
+    private String numberOfHouseholds;
+    @Column(name = "location_type")
+    private String locationType;
     @Column(name = "operation_status")
     private String operationStatus;
     @Column(name = "facility_type")
     private String facilityType;
-    @Column(name = "number_of_beds")
-    private Integer numberOfBeds;
-    @Column(name = "number_of_cots")
-    private Integer numberOfCots;
-    @Column(name = "number_of_nurses")
-    private Integer numberOfNurses;
-    @Column(name = "number_of_doctors")
-    private Integer numberOfDoctors;
-    @Column(name = "address_line1")
-    private String addressLine;
-    @Column(name = "address_line2")
-    private String addressLine2;
-    @Column(name = "postal_address")
-    private String postalAddress;
-    @Column(name = "web_address")
-    private String webAddress;
-    @Column(name = "email")
-    private String email;
-    @Column(name = "phone")
-    private String phone;
-    @Column(name = "mobile")
-    private String mobile;
-    @Column(name = "fax")
-    private String fax;
-    @Column(name = "catchment_population_head_count")
-    private Integer catchmentPopulationHeadCount;
-    @Column(name = "catchment_population_cso")
-    private Integer catchmentPopulationCso;
-    @Column(name = "longitude")
-    private String longitude;
+    @Column(name = "ownership")
+    private String ownersip;
+    @Column(name = "mobility_status")
+    private String mobilityStatus;
+    @Column(name = "ownership_type")
+    private String ownershipType;
+ 
+    @Column(name = "accesibility")
+    private String accesibility;
+ 
     @Column(name = "latitude")
     private String latitude;
+  
+    @Column(name = "longitude")
+    private String longitude;
     @Column(name = "geom")
     private String geom;
-    @Column(name = "location_type")
-    private String locationType;
-    @Column(name = "ward")
-    private String ward;
-    @Column(name = "constituency")
-    private String constituency;
-    @Column(name = "district")
-    private String district;
-    @Column(name = "province")
-    private String province;
-    @Column(name = "number_of_paramedics")
-    private Integer numberOfParamedics;
-    @Column(name = "number_of_midwives")
-    private Integer numberOfMidwives;
+//    @Column(name = "status")
+//    private Integer status;
+//    @Column(name = "date_approved")
+//    @Temporal(TemporalType.TIMESTAMP)
+//    private Date dateApproved;
+//    @Column(name = "approved_by")
+//    private Integer approvedBy;
+//    @Basic(optional = false)
+//    @NotNull
+//    @Column(name = "date_created")
+//    @Temporal(TemporalType.TIMESTAMP)
+//    private Date dateCreated;
+//    @Column(name = "created_by")
+//    private Integer createdBy;
+//    @Column(name = "date_updated")
+//    @Temporal(TemporalType.TIMESTAMP)
+//    private Date dateUpdated;
+//    @Column(name = "updated_by")
+//    private Integer updatedBy;
+//    @Column(name = "date_verified")
+//    @Temporal(TemporalType.TIMESTAMP)
+//    private Date dateVerified;
+//    @Column(name = "verified_by")
+//    private Integer verifiedBy;
+//    @Size(max = 2147483647)
+//    @Column(name = "verifier_comments")
+//    private String verifierComments;
+//    @Size(max = 2147483647)
+//    @Column(name = "approver_comments")
+//    private String approverComments;
+//    @Column(name = "province_approval_status")
+//    private Integer provinceApprovalStatus;
+//    @Column(name = "national_approval_status")
+//    private Integer nationalApprovalStatus;
+    // @Pattern(regexp="[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]*[a-z0-9])?", message="Invalid email")//if the field contains email address consider using this annotation to enforce field validation
+   
+    @Column(name = "email")
+    private String email;
+    @Column(name = "mobile")
+    private String mobile;
+    @Column(name = "phone")
+    private String phone;
+   
+    @Column(name = "plot_no")
+    private String plotNo;
+   
+    @Column(name = "street")
+    private String street;
+   
+    @Column(name = "town")
+    private String town;
+ 
+    @Column(name = "postal_address")
+    private String postalAddress;
+    // @Pattern(regexp="^\\(?(\\d{3})\\)?[- ]?(\\d{3})[- ]?(\\d{4})$", message="Invalid phone/fax format, should be as xxx-xxx-xxxx")//if the field contains phone or fax number consider using this annotation to enforce field validation
+  
+    @Column(name = "fax")
+    private String fax;
+    
+    @Column(name = "physical_address")
+    private String physicalAddress;
 
     public Facilities() {
     }
 
-    /**
-     * @return the id
-     */
-    public Long getId() {
-        return id;
-    }
-
-    /**
-     * @param id the id to set
-     */
-    public void setId(Long id) {
+    public Facilities(Integer id) {
         this.id = id;
     }
 
-    /**
-     * @return the name
-     */
+    public Facilities(Integer id, String name, String mobilityStatus, String ownershipType, String accesibility) {
+        this.id = id;
+        this.name = name;
+        this.mobilityStatus = mobilityStatus;
+        this.ownershipType = ownershipType;
+        this.accesibility = accesibility;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+
+    public String getHimsCode() {
+        return himsCode;
+    }
+
+    public void setHimsCode(String himsCode) {
+        this.himsCode = himsCode;
+    }
+
+    public String getSmartcareCode() {
+        return smartcareCode;
+    }
+
+    public void setSmartcareCode(String smartcareCode) {
+        this.smartcareCode = smartcareCode;
+    }
+
+    public String getElmisCode() {
+        return elmisCode;
+    }
+
+    public void setElmisCode(String elmisCode) {
+        this.elmisCode = elmisCode;
+    }
+
+    public String getHpczCode() {
+        return hpczCode;
+    }
+
+    public void setHpczCode(String hpczCode) {
+        this.hpczCode = hpczCode;
+    }
+
+    public String getDisaCode() {
+        return disaCode;
+    }
+
+    public void setDisaCode(String disaCode) {
+        this.disaCode = disaCode;
+    }
+
     public String getName() {
         return name;
     }
 
-    /**
-     * @param name the name to set
-     */
     public void setName(String name) {
         this.name = name;
     }
 
+    public String getCatchmentPopulationHeadCount() {
+        return catchmentPopulationHeadCount;
+    }
+
+    public void setCatchmentPopulationHeadCount(String catchmentPopulationHeadCount) {
+        this.catchmentPopulationHeadCount = catchmentPopulationHeadCount;
+    }
+
+    public String getCatchmentPopulationCso() {
+        return catchmentPopulationCso;
+    }
+
+    public void setCatchmentPopulationCso(String catchmentPopulationCso) {
+        this.catchmentPopulationCso = catchmentPopulationCso;
+    }
+
+    public String getNumberOfHouseholds() {
+        return numberOfHouseholds;
+    }
+
+    public void setNumberOfHouseholds(String numberOfHouseholds) {
+        this.numberOfHouseholds = numberOfHouseholds;
+    }
+
+    public String getMobilityStatus() {
+        return mobilityStatus;
+    }
+
+    public void setMobilityStatus(String mobilityStatus) {
+        this.mobilityStatus = mobilityStatus;
+    }
     
 
-    /**
-     * @return the ihrisId
-     */
-    public String getIhrisId() {
-        return ihrisId;
+    public String getOwnershipType() {
+        return ownershipType;
+    }
+
+    public void setOwnershipType(String ownershipType) {
+        this.ownershipType = ownershipType;
+    }
+    
+   
+
+    public String getAccesibility() {
+        return accesibility;
+    }
+
+    public void setAccesibility(String accesibility) {
+        this.accesibility = accesibility;
+    }
+
+    public String getLatitude() {
+        return latitude;
+    }
+
+    public void setLatitude(String latitude) {
+        this.latitude = latitude;
+    }
+
+    public String getLongitude() {
+        return longitude;
+    }
+
+    public void setLongitude(String longitude) {
+        this.longitude = longitude;
+    }
+
+    public Object getGeom() {
+        return geom;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getMobile() {
+        return mobile;
+    }
+
+    public void setMobile(String mobile) {
+        this.mobile = mobile;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+
+    public String getPlotNo() {
+        return plotNo;
+    }
+
+    public void setPlotNo(String plotNo) {
+        this.plotNo = plotNo;
+    }
+
+    public String getStreet() {
+        return street;
+    }
+
+    public void setStreet(String street) {
+        this.street = street;
+    }
+
+    public String getTown() {
+        return town;
+    }
+
+    public void setTown(String town) {
+        this.town = town;
+    }
+
+    public String getPostalAddress() {
+        return postalAddress;
+    }
+
+    public void setPostalAddress(String postalAddress) {
+        this.postalAddress = postalAddress;
+    }
+
+    public String getFax() {
+        return fax;
+    }
+
+    public void setFax(String fax) {
+        this.fax = fax;
+    }
+
+    public String getPhysicalAddress() {
+        return physicalAddress;
+    }
+
+    public void setPhysicalAddress(String physicalAddress) {
+        this.physicalAddress = physicalAddress;
+    }
+
+    @Override
+    public int hashCode() {
+        int hash = 0;
+        hash += (id != null ? id.hashCode() : 0);
+        return hash;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        // TODO: Warning - this method won't work in the case the id fields are not set
+        if (!(object instanceof Facilities)) {
+            return false;
+        }
+        Facilities other = (Facilities) object;
+        if ((this.id == null && other.id != null) || (this.id != null && !this.id.equals(other.id))) {
+            return false;
+        }
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        return "com.moh.mfl.model.Facility[ id=" + id + " ]";
     }
 
     /**
-     * @param ihrisId the ihrisId to set
+     * @return the locationType
      */
-    public void setIhrisId(String ihrisId) {
-        this.ihrisId = ihrisId;
+    public String getLocationType() {
+        return locationType;
     }
 
     /**
-     * @return the ownersip
+     * @param locationType the locationType to set
      */
-    public String getOwnersip() {
-        return ownersip;
-    }
-
-    /**
-     * @param ownersip the ownersip to set
-     */
-    public void setOwnersip(String ownersip) {
-        this.ownersip = ownersip;
+    public void setLocationType(String locationType) {
+        this.locationType = locationType;
     }
 
     /**
@@ -183,256 +422,17 @@ public class Facilities implements Serializable {
     }
 
     /**
-     * @return the numberOfBeds
+     * @return the ownersip
      */
-    public Integer getNumberOfBeds() {
-        return numberOfBeds;
+    public String getOwnersip() {
+        return ownersip;
     }
 
     /**
-     * @param numberOfBeds the numberOfBeds to set
+     * @param ownersip the ownersip to set
      */
-    public void setNumberOfBeds(Integer numberOfBeds) {
-        this.numberOfBeds = numberOfBeds;
-    }
-
-    /**
-     * @return the numberOfCots
-     */
-    public Integer getNumberOfCots() {
-        return numberOfCots;
-    }
-
-    /**
-     * @param numberOfCots the numberOfCots to set
-     */
-    public void setNumberOfCots(Integer numberOfCots) {
-        this.numberOfCots = numberOfCots;
-    }
-
-    /**
-     * @return the numberOfNurses
-     */
-    public Integer getNumberOfNurses() {
-        return numberOfNurses;
-    }
-
-    /**
-     * @param numberOfNurses the numberOfNurses to set
-     */
-    public void setNumberOfNurses(Integer numberOfNurses) {
-        this.numberOfNurses = numberOfNurses;
-    }
-
-    /**
-     * @return the numberOfDoctors
-     */
-    public Integer getNumberOfDoctors() {
-        return numberOfDoctors;
-    }
-
-    /**
-     * @param numberOfDoctors the numberOfDoctors to set
-     */
-    public void setNumberOfDoctors(Integer numberOfDoctors) {
-        this.numberOfDoctors = numberOfDoctors;
-    }
-
-    /**
-     * @return the addressLine
-     */
-    public String getAddressLine() {
-        return addressLine;
-    }
-
-    /**
-     * @param addressLine the addressLine to set
-     */
-    public void setAddressLine(String addressLine) {
-        this.addressLine = addressLine;
-    }
-
-    /**
-     * @return the addressLine2
-     */
-    public String getAddressLine2() {
-        return addressLine2;
-    }
-
-    /**
-     * @param addressLine2 the addressLine2 to set
-     */
-    public void setAddressLine2(String addressLine2) {
-        this.addressLine2 = addressLine2;
-    }
-
-    /**
-     * @return the postalAddress
-     */
-    public String getPostalAddress() {
-        return postalAddress;
-    }
-
-    /**
-     * @param postalAddress the postalAddress to set
-     */
-    public void setPostalAddress(String postalAddress) {
-        this.postalAddress = postalAddress;
-    }
-
-    /**
-     * @return the webAddress
-     */
-    public String getWebAddress() {
-        return webAddress;
-    }
-
-    /**
-     * @param webAddress the webAddress to set
-     */
-    public void setWebAddress(String webAddress) {
-        this.webAddress = webAddress;
-    }
-
-    /**
-     * @return the email
-     */
-    public String getEmail() {
-        return email;
-    }
-
-    /**
-     * @param email the email to set
-     */
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    /**
-     * @return the phone
-     */
-    public String getPhone() {
-        return phone;
-    }
-
-    /**
-     * @param phone the phone to set
-     */
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    /**
-     * @return the mobile
-     */
-    public String getMobile() {
-        return mobile;
-    }
-
-    /**
-     * @param mobile the mobile to set
-     */
-    public void setMobile(String mobile) {
-        this.mobile = mobile;
-    }
-
-    /**
-     * @return the fax
-     */
-    public String getFax() {
-        return fax;
-    }
-
-    /**
-     * @param fax the fax to set
-     */
-    public void setFax(String fax) {
-        this.fax = fax;
-    }
-
-    /**
-     * @return the catchmentPopulationHeadCount
-     */
-    public Integer getCatchmentPopulationHeadCount() {
-        return catchmentPopulationHeadCount;
-    }
-
-    /**
-     * @param catchmentPopulationHeadCount the catchmentPopulationHeadCount to
-     * set
-     */
-    public void setCatchmentPopulationHeadCount(Integer catchmentPopulationHeadCount) {
-        this.catchmentPopulationHeadCount = catchmentPopulationHeadCount;
-    }
-
-    /**
-     * @return the catchmentPopulationCso
-     */
-    public Integer getCatchmentPopulationCso() {
-        return catchmentPopulationCso;
-    }
-
-    /**
-     * @param catchmentPopulationCso the catchmentPopulationCso to set
-     */
-    public void setCatchmentPopulationCso(Integer catchmentPopulationCso) {
-        this.catchmentPopulationCso = catchmentPopulationCso;
-    }
-
-    /**
-     * @return the longitude
-     */
-    public String getLongitude() {
-        return longitude;
-    }
-
-    /**
-     * @param longitude the longitude to set
-     */
-    public void setLongitude(String longitude) {
-        this.longitude = longitude;
-    }
-
-    /**
-     * @return the latitude
-     */
-    public String getLatitude() {
-        return latitude;
-    }
-
-    /**
-     * @param latitude the latitude to set
-     */
-    public void setLatitude(String latitude) {
-        this.latitude = latitude;
-    }
-
-    /**
-     * @return the geom
-     */
-    public String getGeom() {
-        return geom;
-    }
-
-    /**
-     * @param geom the geom to set
-     */
-    public void setGeom(String geom) {
-        this.geom = geom;
-    }
-
-    /**
-     * @return the locationType
-     */
-    public String getLocationType() {
-        return locationType;
-    }
-
-    /**
-     * @param locationType the locationType to set
-     */
-    public void setLocationType(String locationType) {
-        this.locationType = locationType;
+    public void setOwnersip(String ownersip) {
+        this.ownersip = ownersip;
     }
 
     /**
@@ -489,104 +489,6 @@ public class Facilities implements Serializable {
      */
     public void setProvince(String province) {
         this.province = province;
-    }
-
-    /**
-     * @return the numberOfParamedics
-     */
-    public Integer getNumberOfParamedics() {
-        return numberOfParamedics;
-    }
-
-    /**
-     * @param numberOfParamedics the numberOfParamedics to set
-     */
-    public void setNumberOfParamedics(Integer numberOfParamedics) {
-        this.numberOfParamedics = numberOfParamedics;
-    }
-
-    /**
-     * @return the numberOfMidwives
-     */
-    public Integer getNumberOfMidwives() {
-        return numberOfMidwives;
-    }
-
-    /**
-     * @param numberOfMidwives the numberOfMidwives to set
-     */
-    public void setNumberOfMidwives(Integer numberOfMidwives) {
-        this.numberOfMidwives = numberOfMidwives;
-    }
-
-    /**
-     * @return the himsCode
-     */
-    public String getHimsCode() {
-        return himsCode;
-    }
-
-    /**
-     * @param himsCode the himsCode to set
-     */
-    public void setHimsCode(String himsCode) {
-        this.himsCode = himsCode;
-    }
-
-    /**
-     * @return the smartcareCode
-     */
-    public String getSmartcareCode() {
-        return smartcareCode;
-    }
-
-    /**
-     * @param smartcareCode the smartcareCode to set
-     */
-    public void setSmartcareCode(String smartcareCode) {
-        this.smartcareCode = smartcareCode;
-    }
-
-    /**
-     * @return the elmisCode
-     */
-    public String getElmisCode() {
-        return elmisCode;
-    }
-
-    /**
-     * @param elmisCode the elmisCode to set
-     */
-    public void setElmisCode(String elmisCode) {
-        this.elmisCode = elmisCode;
-    }
-
-    /**
-     * @return the hpczCode
-     */
-    public String getHpczCode() {
-        return hpczCode;
-    }
-
-    /**
-     * @param hpczCode the hpczCode to set
-     */
-    public void setHpczCode(String hpczCode) {
-        this.hpczCode = hpczCode;
-    }
-
-    /**
-     * @return the disaCode
-     */
-    public String getDisaCode() {
-        return disaCode;
-    }
-
-    /**
-     * @param disaCode the disaCode to set
-     */
-    public void setDisaCode(String disaCode) {
-        this.disaCode = disaCode;
     }
 
 }

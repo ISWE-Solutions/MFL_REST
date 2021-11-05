@@ -16,7 +16,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  * @author Francis Chulu
  */
 @Entity
-@Table(name = "`MFL_operationstatus`")
+@Table(name = "`operations_status`")
 @EntityListeners(AuditingEntityListener.class)
 public class OperationStatus implements Serializable {
 

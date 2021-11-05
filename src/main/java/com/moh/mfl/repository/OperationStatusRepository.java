@@ -1,6 +1,5 @@
 package com.moh.mfl.repository;
 
-import com.moh.mfl.model.Districttypes;
 import com.moh.mfl.model.OperationStatus;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -20,6 +19,6 @@ public interface OperationStatusRepository extends JpaRepository<OperationStatus
      * @param name
      * @return list
      */
-    @Query(value = "SELECT * FROM \"MFL_operationstatus\" WHERE name ILIKE %:name% ORDER BY id ASC", nativeQuery = true)
+    @Query(value = "SELECT * FROM \"operations_status\" WHERE name ILIKE %:name% ORDER BY id ASC", nativeQuery = true)
     List<OperationStatus> findByName(@Param("name") String name);
 }

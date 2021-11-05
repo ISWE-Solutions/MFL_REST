@@ -16,7 +16,7 @@ import org.springframework.data.jpa.domain.support.AuditingEntityListener;
  * @author Francis Chulu
  */
 @Entity
-@Table(name = "`MFL_facilitytype`")
+@Table(name = "`facility_types`")
 @EntityListeners(AuditingEntityListener.class)
 public class FacilityTypes implements Serializable {
 
@@ -26,6 +26,7 @@ public class FacilityTypes implements Serializable {
     @NotBlank
     @Column(name = "name")
     private String name;
+    private Long shared_id;
 
     public FacilityTypes() {
     }
@@ -56,5 +57,19 @@ public class FacilityTypes implements Serializable {
      */
     public void setName(String name) {
         this.name = name;
+    }
+
+    /**
+     * @return the shared_id
+     */
+    public Long getShared_id() {
+        return shared_id;
+    }
+
+    /**
+     * @param shared_id the shared_id to set
+     */
+    public void setShared_id(Long shared_id) {
+        this.shared_id = shared_id;
     }
 }
