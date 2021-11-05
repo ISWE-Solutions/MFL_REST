@@ -13,12 +13,10 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface CountFacilitiesByTypeRepository extends JpaRepository<FacilityTypeCounts, Long> {
 
-    @Query(value = "select count(f.id) as count,ft.name as type FROM \"facility\" f\n"
+    @Query(value = "select count(f.id) AS count,ft.name AS type FROM \"facility\" f "
             + "LEFT JOIN \"facility_types\" ft ON f.type=ft.id\n"
-            + "LEFT JOIN \"operations_status\" os ON f.f.operational_status=os.id\n"
-            + "WHERE os.name='Functional'\n"
-            + "group by type order by count DESC ", nativeQuery = true)
+            + "LEFT JOIN \"operations_status\" os ON f.operational_status=os.id WHERE os.name='Functional'\n"
+            + "group by ft.name order by count DESC", nativeQuery = true)
     List<FacilityTypeCounts> findByFacilityTypeId();
-
 
 }
