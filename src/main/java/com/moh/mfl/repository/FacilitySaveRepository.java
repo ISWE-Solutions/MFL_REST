@@ -14,5 +14,7 @@ import org.springframework.stereotype.Repository;
 public interface FacilitySaveRepository extends JpaRepository<FacilitySave, Id> {
 
     Optional<FacilitySave> findByFacilityName(String name);
+    FacilitySave findById(Integer id);
+    
 
 }

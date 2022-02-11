@@ -1,5 +1,6 @@
 package com.moh.mfl.repository;
 
+import com.moh.mfl.model.ProvinceList;
 import com.moh.mfl.model.Provinces;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -23,6 +24,9 @@ public interface ProvincesRepository extends JpaRepository<Provinces, Long> {
     @Query(value = "SELECT id,name,population,pop_density,area_sq_km,ST_AsGeoJSON(geom) as geom FROM geography_province ORDER BY id ASC", nativeQuery = true)
     @Override
     List<Provinces> findAll();
+    
+    @Query(value = "SELECT id,name FROM geography_province ORDER BY id ASC", nativeQuery = true)
+    List<ProvinceList> getIdAndNameOnly();
 
     /**
      *

@@ -7,12 +7,14 @@ import com.moh.mfl.model.Districttypes;
 import com.moh.mfl.model.Districts;
 import com.moh.mfl.model.Facilities;
 import com.moh.mfl.model.FacilityByProvince;
+import com.moh.mfl.model.FacilityIdAndName;
 import com.moh.mfl.model.FacilitySave;
 import com.moh.mfl.model.FacilityServices;
 import com.moh.mfl.model.FacilityTypeCounts;
 import com.moh.mfl.model.FacilityTypes;
 import com.moh.mfl.model.OperationStatus;
 import com.moh.mfl.model.Ownership;
+import com.moh.mfl.model.ProvinceList;
 import com.moh.mfl.model.Provinces;
 import com.moh.mfl.model.ServiceScope;
 import com.moh.mfl.model.Wards;
@@ -22,12 +24,14 @@ import com.moh.mfl.repository.CountFacilitiesByProvinceRepository;
 import com.moh.mfl.repository.CountFacilitiesByTypeRepository;
 import com.moh.mfl.repository.DistrictTypesRepository;
 import com.moh.mfl.repository.DistrictsRepository;
+import com.moh.mfl.repository.FacilitiesIdAndNameOnlyRepository;
 import com.moh.mfl.repository.FacilitiesRepository;
 import com.moh.mfl.repository.FacilitySaveRepository;
 import com.moh.mfl.repository.FacilityServicesRepository;
 import com.moh.mfl.repository.FacilityTypesRepository;
 import com.moh.mfl.repository.OperationStatusRepository;
 import com.moh.mfl.repository.OwnershipRepository;
+import com.moh.mfl.repository.ProvincesIdAndNameOnlyRepository;
 import com.moh.mfl.repository.ProvincesRepository;
 import com.moh.mfl.repository.ServiceAreaRepository;
 import com.moh.mfl.repository.ServiceScopeRepository;
@@ -46,6 +50,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -85,7 +90,11 @@ public class RestController {
     private Districttypes districtType;
     @Autowired
     ProvincesRepository provincesRepository;
+    @Autowired
+    ProvincesIdAndNameOnlyRepository provincesIdAndNameOnlyRepository;
     private Provinces provinces;
+    @Autowired
+    FacilitiesIdAndNameOnlyRepository facilitiesIdAndNameOnlyRepository;
     @Autowired
     FacilitySaveRepository facilityRepository;
     FacilitySave facility;
@@ -104,6 +113,34 @@ public class RestController {
         this.config = new SecurityConfig();
 
         //this.facilityServices = new FacilityServices();
+    }
+
+    /**
+     * Save facility coordinates - lat/long
+     *
+     * @param id
+     * @param longitude
+     * @param latitude
+     * @return ResponseEntity
+     */
+    @PutMapping(value = "/facility/{id}/latlong/{latitude}/{longitude}", produces = "application/json")
+    public ResponseEntity<?> Facility(
+            @PathVariable Integer id,
+            @PathVariable String latitude,
+            @PathVariable String longitude) {
+        try {
+            facility = facilityRepository.findById(id);
+            if (facility != null) {
+                facility.setLatitude(latitude);
+                facility.setLongitude(longitude);
+                this.facilityRepository.save(facility);
+                return new ResponseEntity(new ApiResponse(true, "Success", "Facility coordinates updated successfully"), HttpStatus.ACCEPTED);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "There is no facility with id:" + id, ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PostMapping(value = {"/facility/push"}, consumes = {"application/json"}, produces = {"application/json"})
@@ -864,10 +901,30 @@ public class RestController {
      *
      * @return ResponseEntity
      */
-    @GetMapping(value = "/Provinces", produces = "application/json")
+    @GetMapping(value = "/provinces", produces = "application/json")
     public ResponseEntity<?> Provinces() {
         try {
             List<Provinces> list = provincesRepository.findAll();
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "No Provinces were found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+
+    }
+
+    /**
+     * All provinces id and name only
+     *
+     * @return
+     */
+    @GetMapping(value = "/provinces/idAndName", produces = "application/json")
+    public ResponseEntity<?> ProvinceIdAndName() {
+        try {
+            List<ProvinceList> list = provincesIdAndNameOnlyRepository.getIdAndNameOnly();
             if (!list.isEmpty()) {
                 return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
             } else {
@@ -885,7 +942,7 @@ public class RestController {
      * @param name
      * @return ResponseEntity
      */
-    @GetMapping(value = "/Provinces/{name}", produces = "application/json")
+    @GetMapping(value = "/provinces/{name}", produces = "application/json")
     public ResponseEntity<?> Province(@PathVariable String name) {
         try {
             List<Provinces> list = provincesRepository.findByName(name);
@@ -898,5 +955,31 @@ public class RestController {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
         }
 
+    }
+
+    /**
+     * Facilities by province id endpoint
+     *
+     * @param id
+     * @return ResponseEntity
+     */
+    @GetMapping(value = "/province/{id}/facilitiesIdAndName", produces = "application/json")
+    public ResponseEntity<?> FacilityIdAndNameOnlyByProvinceId(@PathVariable String id) {
+        try {
+            Optional<Provinces> province = provincesRepository.findById(Long.valueOf(id));
+            if (province.isPresent()) {
+
+                List<FacilityIdAndName> list = facilitiesIdAndNameOnlyRepository.findByProvinceId(Long.valueOf(id));
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "There are no facilities in the system for the province with id:" + id, ""), HttpStatus.NOT_FOUND);
+                }
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "Province with id:" + id + " was not found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (NumberFormatException ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 }
