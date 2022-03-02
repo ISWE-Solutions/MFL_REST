@@ -36,23 +36,35 @@ import com.moh.mfl.repository.ProvincesRepository;
 import com.moh.mfl.repository.ServiceAreaRepository;
 import com.moh.mfl.repository.ServiceScopeRepository;
 import com.moh.mfl.repository.WardsRepository;
+import com.moh.mfl.request.AuthRequest;
 import com.moh.mfl.request.Request;
 import com.moh.mfl.response.ApiResponse;
+import com.moh.mfl.response.AuthResponse;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageConverter;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 
 /**
  *
@@ -106,13 +118,16 @@ public class RestController {
     FacilityServicesRepository facilityServicesRepository;
     @Autowired
     ApiUserRepo userRepo;
+    private ResponseEntity resp;
+    private final RestTemplate restTemplate;
+    @Autowired
+    Environment env;
 
     private final SecurityConfig config;
 
-    public RestController() {
+    public RestController(RestTemplate restTemplateBuilder) {
         this.config = new SecurityConfig();
-
-        //this.facilityServices = new FacilityServices();
+        this.restTemplate = restTemplateBuilder;
     }
 
     /**
@@ -237,7 +252,7 @@ public class RestController {
                 resp = new ResponseEntity(new ApiResponse(false, "Invalid credentials provided!", ""), HttpStatus.BAD_REQUEST);
 
             }
-        } catch (Exception ex) {
+        } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
         }
         return resp;
@@ -963,13 +978,12 @@ public class RestController {
      * @param id
      * @return ResponseEntity
      */
-    @GetMapping(value = "/province/{id}/facilitiesIdAndName", produces = "application/json")
+    @GetMapping(value = "/district/{id}/facilitiesIdAndName", produces = "application/json")
     public ResponseEntity<?> FacilityIdAndNameOnlyByProvinceId(@PathVariable String id) {
         try {
-            Optional<Provinces> province = provincesRepository.findById(Long.valueOf(id));
-            if (province.isPresent()) {
-
-                List<FacilityIdAndName> list = facilitiesIdAndNameOnlyRepository.findByProvinceId(Long.valueOf(id));
+            Optional<Districts> district = districtsRepository.findById(Long.valueOf(id));
+            if (district.isPresent()) {
+                List<FacilityIdAndName> list = facilitiesIdAndNameOnlyRepository.findByDistrictId(Long.valueOf(id));
                 if (!list.isEmpty()) {
                     return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
                 } else {
@@ -981,5 +995,56 @@ public class RestController {
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    /**
+     * Auth endpoint
+     *
+     * @param request
+     * @param servletRequest
+     * @return
+     */
+    @PostMapping(value = {"/authenticate"}, consumes = {"application/json"}, produces = {"application/json"})
+    public ResponseEntity<?> authenticateUser(@Valid @RequestBody AuthRequest request, HttpServletRequest servletRequest) {
+        try {
+            resp = processRequest(request);
+        } catch (RestClientException ex) {
+            resp = new ResponseEntity(new ApiResponse(false, "Server Error occured", ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return resp;
+    }
+
+    /**
+     * Process Auth request
+     *
+     * @param request
+     * @return
+     */
+    private ResponseEntity processRequest(AuthRequest request) {
+        try {
+            String url = env.getProperty("url");
+            //Set the request headers and specify the response converters to be used
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            HttpEntity<AuthRequest> entity = new HttpEntity<>(request, headers);
+            List<HttpMessageConverter<?>> converters = new ArrayList<>();
+            converters.add(new MappingJackson2HttpMessageConverter());
+            restTemplate.setMessageConverters(converters);
+            //Send the request and save the result in the response class object
+            ResponseEntity<AuthResponse> results = restTemplate.exchange(url, HttpMethod.POST, entity, AuthResponse.class);
+
+            if (results.getStatusCodeValue() == 202 || results.getStatusCodeValue() == 200) {
+                if (results.getBody().getSuccess().equals("true")) {
+                    resp = new ResponseEntity(new ApiResponse(true, "Success", results.getBody().getData()), HttpStatus.OK);
+                } else {
+                    resp = new ResponseEntity(new ApiResponse(false, "Invalid username/password provided!", ""), HttpStatus.NOT_ACCEPTABLE);
+                }
+            } else {
+                resp = new ResponseEntity(new ApiResponse(false, "Invalid username/password provided!", ""), HttpStatus.NOT_ACCEPTABLE);
+            }
+        } catch (RestClientException ex) {
+            resp = new ResponseEntity(new ApiResponse(false, "Server Error occured", ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+        return resp;
     }
 }

@@ -1,7 +1,17 @@
 package com.moh.mfl.config;
 
+import java.security.KeyManagementException;
+import java.security.KeyStoreException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.X509Certificate;
 import org.apache.commons.text.RandomStringGenerator;
+import org.apache.http.client.config.RequestConfig;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.env.Environment;
+import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -9,7 +19,12 @@ import org.springframework.security.config.annotation.web.configuration.WebSecur
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import javax.net.ssl.SSLContext;
+import org.apache.http.conn.ssl.TrustStrategy;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
 
 /**
  *
@@ -25,6 +40,8 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
     private final long MAX_AGE_SECS = 3600;
+    @Autowired
+    private Environment env;
 
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/**")
@@ -41,10 +58,10 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .csrf()
                 .disable()
                 .exceptionHandling();
-                // .authenticationEntryPoint(unauthorizedHandler)
-                // .and()
-                //.sessionManagement()
-                //  .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+        // .authenticationEntryPoint(unauthorizedHandler)
+        // .and()
+        //.sessionManagement()
+        //  .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 //                .and()
 //                .authorizeRequests()
 //                .antMatchers("/mfl/**")
@@ -54,6 +71,34 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
 //                .anyRequest()
 //                .authenticated();
 
+    }
+
+    @Bean
+    public RestTemplate restTemplate()
+            throws KeyStoreException, NoSuchAlgorithmException, KeyManagementException {
+        TrustStrategy acceptingTrustStrategy = (X509Certificate[] chain, String authType) -> true;
+
+        SSLContext sslContext = org.apache.http.ssl.SSLContexts.custom()
+                .loadTrustMaterial(null, acceptingTrustStrategy)
+                .build();
+
+        SSLConnectionSocketFactory csf = new SSLConnectionSocketFactory(sslContext);
+        RequestConfig config = RequestConfig.custom()
+                .setConnectTimeout(Integer.parseInt(env.getProperty("TIMEOUT")) * 1000)
+                .setConnectionRequestTimeout(Integer.parseInt(env.getProperty("TIMEOUT")) * 1000)
+                .setSocketTimeout(Integer.parseInt(env.getProperty("TIMEOUT")) * 1000).build();
+
+        CloseableHttpClient httpClient = HttpClients.custom()
+                .setSSLSocketFactory(csf)
+                .setDefaultRequestConfig(config)
+                .build();
+
+        HttpComponentsClientHttpRequestFactory requestFactory
+                = new HttpComponentsClientHttpRequestFactory();
+
+        requestFactory.setHttpClient(httpClient);
+        RestTemplate restTemplate = new RestTemplate(requestFactory);
+        return restTemplate;
     }
 
     public String encodeKey(String key) {

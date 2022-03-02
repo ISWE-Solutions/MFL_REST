@@ -32,7 +32,7 @@ public class FacilityIdAndName implements Serializable {
     @Size(min = 1, max = 2147483647)
     @Column(name = "name")
     private String name;
-    private String province;
+    private String district;
     
 
     public FacilityIdAndName() {
@@ -61,17 +61,18 @@ public class FacilityIdAndName implements Serializable {
     }
 
     /**
-     * @return the province
+     * @return the district
      */
-    public String getProvince() {
-        return province;
+    public String getDistrict() {
+        return district;
     }
 
     /**
-     * @param province the province to set
+     * @param district the district to set
      */
-    public void setProvince(String province) {
-        this.province = province;
+    public void setDistrict(String district) {
+        this.district = district;
     }
+
 
 }
