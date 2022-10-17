@@ -345,7 +345,7 @@ public class RestController {
      * @param id
      * @return
      */
-    @PutMapping(value = "/facility/{id}", produces = "application/json")
+    @GetMapping(value = "/facility/{id}", produces = "application/json")
     public ResponseEntity<?> FacilityById(
             @PathVariable Integer id) {
         try {
