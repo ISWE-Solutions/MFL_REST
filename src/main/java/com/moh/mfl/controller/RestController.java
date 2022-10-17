@@ -349,7 +349,7 @@ public class RestController {
     public ResponseEntity<?> FacilityById(
             @PathVariable Integer id) {
         try {
-            facility = facilityRepository.findById(id);
+            Facilities facility = facilitiesRepository.findByFacilitiyId(id);
             if (facility != null) {
                 return new ResponseEntity(new ApiResponse(true, "Success", facility), HttpStatus.ACCEPTED);
             } else {

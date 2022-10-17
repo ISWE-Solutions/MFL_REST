@@ -83,7 +83,38 @@ public interface FacilitiesRepository extends JpaRepository<Facilities, Long> {
     List<Facilities> findByName(@Param("name") String name);
 
     /**
+     * Find by id
      *
+     * @param id
+     * @return list
+     */
+    @Query(value = " SELECT f.id, f.name, f.\"disa_code\", f.\"hims_code\", f.\"smartcare_code\", f.\"elmis_code\",\n"
+            + "f.\"hpcz_code\", f.\"phone\", f.\"mobile\", f.\"accesibility\",\n"
+            + "CASE WHEN f.ownership_type = '1' THEN 'Public' ELSE 'Private' END\n"
+            + "AS ownership_type,\n"
+            + "f.physical_address, f.postal_address, f.town, f.email,\n"
+            + "f.fax, f.catchment_population_head_count, f.catchment_population_cso,\n"
+            + "f.street, f.plot_no, "
+            + "CASE WHEN f.mobility_status ='1' THEN 'Fixed' WHEN f.mobility_status ='2' THEN 'Mobile' ELSE 'telemedicine' END\n"
+            + "AS mobility_status, "
+            + "f.number_of_households, w.name as ward,\n"
+            + "c.name as constituency,\n"
+            + "ft.name as facility_type, lt.name as location_type, ow.name as ownership,\n"
+            + "os.name as operation_status, d.name as district,\n"
+            + "f.longitude, f.latitude, ST_AsGeoJSON(f.geom) as geom, p.name as province\n"
+            + "FROM \"facility\" f LEFT JOIN \"geography_ward\" w ON f.ward_id = w.id\n"
+            + "LEFT JOIN \"geography_constituency\" c ON f.constituency_id = c.id\n"
+            + "LEFT JOIN \"facility_types\" ft ON f.type = ft.id\n"
+            + "LEFT JOIN \"geography_locationtype\" lt ON f.location = lt.id\n"
+            + "LEFT JOIN \"ownership\" ow ON f.ownership = ow.id\n"
+            + "LEFT JOIN \"operations_status\" os\n"
+            + "ON f.operational_status = os.id LEFT JOIN \"geography_district\" d ON f.district_id = d.id\n"
+            + "LEFT JOIN \"geography_province\" p ON d.province_id = p.id\n"
+            + "WHERE f.id =:id ORDER BY f.id DESC LIMIT 5", nativeQuery = true)
+    Facilities findByFacilitiyId(@Param("id") Integer id);
+
+    /**
+     * Get all facilities
      * @return list
      */
     @Query(value = " SELECT f.id, f.name, f.\"disa_code\", f.\"hims_code\", f.\"smartcare_code\", f.\"elmis_code\",\n"
