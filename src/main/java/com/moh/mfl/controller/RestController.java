@@ -363,11 +363,10 @@ public class RestController {
     /**
      * Get all facilities
      *
-     * @param name
      * @return
      */
     @GetMapping(value = "/facilities", produces = "application/json")
-    public ResponseEntity<?> Facilities(@PathVariable String name) {
+    public ResponseEntity<?> Facilities() {
         try {
             List<Facilities> list = facilitiesRepository.findAllFacilitieses();
             if (!list.isEmpty()) {
