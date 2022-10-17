@@ -339,6 +339,54 @@ public class RestController {
         }
     }
 
+    /**
+     * Get facility by id
+     *
+     * @param id
+     * @return
+     */
+    @PutMapping(value = "/facility/{id}", produces = "application/json")
+    public ResponseEntity<?> FacilityById(
+            @PathVariable Integer id) {
+        try {
+            facility = facilityRepository.findById(id);
+            if (facility != null) {
+                return new ResponseEntity(new ApiResponse(true, "Success", facility), HttpStatus.ACCEPTED);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "There is no facility with id:" + id, ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Get all facilities
+     *
+     * @param name
+     * @return
+     */
+    @GetMapping(value = "/facilities", produces = "application/json")
+    public ResponseEntity<?> Facilities(@PathVariable String name) {
+        try {
+            List<Facilities> list = facilitiesRepository.findAllFacilitieses();
+            if (!list.isEmpty()) {
+                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            } else {
+                return new ResponseEntity(new ApiResponse(false, "No Facility was not found!", ""), HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception ex) {
+            return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    /**
+     * Get facility by name and district
+     *
+     * @param name
+     * @param district_id
+     * @return
+     */
     @GetMapping(value = "/Facilities/{name}/{district_id}", produces = "application/json")
     public ResponseEntity<?> Facility(@PathVariable String name, Long district_id) {
         try {
