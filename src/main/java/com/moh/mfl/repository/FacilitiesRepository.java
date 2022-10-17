@@ -110,7 +110,7 @@ public interface FacilitiesRepository extends JpaRepository<Facilities, Long> {
             + "LEFT JOIN \"operations_status\" os\n"
             + "ON f.operational_status = os.id LEFT JOIN \"geography_district\" d ON f.district_id = d.id\n"
             + "LEFT JOIN \"geography_province\" p ON d.province_id = p.id\n"
-            + "WHERE f.id =:id ORDER BY f.id DESC LIMIT 5", nativeQuery = true)
+            + "WHERE f.id =:id ORDER BY f.id DESC", nativeQuery = true)
     Facilities findByFacilitiyId(@Param("id") Integer id);
 
     /**
@@ -139,7 +139,7 @@ public interface FacilitiesRepository extends JpaRepository<Facilities, Long> {
             + "LEFT JOIN \"operations_status\" os\n"
             + "ON f.operational_status = os.id LEFT JOIN \"geography_district\" d ON f.district_id = d.id\n"
             + "LEFT JOIN \"geography_province\" p ON d.province_id = p.id\n"
-            + " ORDER BY f.id DESC LIMIT 5", nativeQuery = true)
+            + " ORDER BY f.id", nativeQuery = true)
     List<Facilities> findAllFacilitieses();
 
     /**
