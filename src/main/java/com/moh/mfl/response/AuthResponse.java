@@ -1,49 +1,38 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package com.moh.mfl.response;
+
+import java.util.List;
 
 /**
  *
- * @author chulu
+ * @author Francis Chulu
+ * @version 1.0
  */
 public class AuthResponse {
 
-    private String success;
-    private Data data;
+    private Boolean success;
     private String message;
+    private Object data;
+    private Object errors;
 
-    public AuthResponse() {
+    public AuthResponse(Boolean success, String message, Object data, Object errors) {
+        this.success = success;
+        this.message = message;
+        this.data = data;
+        this.errors = errors;
     }
 
     /**
      * @return the success
      */
-    public String getSuccess() {
+    public Boolean getSuccess() {
         return success;
     }
 
     /**
      * @param success the success to set
      */
-    public void setSuccess(String success) {
+    public void setSuccess(Boolean success) {
         this.success = success;
-    }
-
-    /**
-     * @return the data
-     */
-    public Data getData() {
-        return data;
-    }
-
-    /**
-     * @param data the data to set
-     */
-    public void setData(Data data) {
-        this.data = data;
     }
 
     /**
@@ -60,4 +49,31 @@ public class AuthResponse {
         this.message = message;
     }
 
+    /**
+     * @return the data
+     */
+    public Object getData() {
+        return data;
+    }
+
+    /**
+     * @param data the data to set
+     */
+    public void setData(Object data) {
+        this.data = data;
+    }
+
+    /**
+     * @return the errors
+     */
+    public Object getErrors() {
+        return errors;
+    }
+
+    /**
+     * @param errors the errors to set
+     */
+    public void setErrors(Object errors) {
+        this.errors = errors;
+    }
 }

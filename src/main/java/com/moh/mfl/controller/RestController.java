@@ -122,6 +122,9 @@ public class RestController {
     private final RestTemplate restTemplate;
     @Autowired
     Environment env;
+    @Autowired
+    ApiUserRepo clientRepository;
+    private ApiUsers client;
 
     private final SecurityConfig config;
 
@@ -142,27 +145,39 @@ public class RestController {
     public ResponseEntity<?> Facility(
             @PathVariable Integer id,
             @PathVariable String latitude,
-            @PathVariable String longitude) {
+            @PathVariable String longitude,
+            HttpServletRequest servletRequest) {
         try {
-            facility = facilityRepository.findById(id);
-            if (facility != null) {
-                facility.setLatitude(latitude);
-                facility.setLongitude(longitude);
-                this.facilityRepository.save(facility);
-                return new ResponseEntity(new ApiResponse(true, "Success", "Facility coordinates updated successfully"), HttpStatus.ACCEPTED);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+
+                facility = facilityRepository.findById(id);
+                if (facility != null) {
+                    facility.setLatitude(latitude);
+                    facility.setLongitude(longitude);
+                    this.facilityRepository.save(facility);
+                    return new ResponseEntity(new ApiResponse(true, "Success", "Facility coordinates updated successfully"), HttpStatus.ACCEPTED);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "There is no facility with id:" + id, ""), HttpStatus.NOT_FOUND);
+                }
+
             } else {
-                return new ResponseEntity(new ApiResponse(false, "There is no facility with id:" + id, ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @PostMapping(value = {"/facility/push"}, consumes = {"application/json"}, produces = {"application/json"})
-    public ResponseEntity<?> facility(@Valid @RequestBody Request request, HttpServletRequest servletRequest) {
-        ResponseEntity resp = null;
+    /**
+     * Authenticate requesting system. Basic authentication
+     *
+     * @param authorizationHeader
+     * @return
+     */
+    private Boolean checkCredentials(String authorizationHeader) {
+        Boolean response = false;
         try {
-            String authorizationHeader = servletRequest.getHeader("Authorization");
             if (authorizationHeader != null && authorizationHeader.toLowerCase().startsWith("basic")) {
                 String base64Credentials = authorizationHeader.substring("Basic".length()).trim();
                 byte[] credDecoded = Base64.getDecoder().decode(base64Credentials);
@@ -170,88 +185,119 @@ public class RestController {
                 final String[] values = credentials.split(":", 2);
                 String username = values[0];
                 String password = values[1];
-                Optional<ApiUsers> user = this.userRepo.findByUsername(username);
-                if (user.isPresent()) {
-                    if (user.get().getStatus() == 1) {
-                        if (this.config.verifyKey(password + user.get().getAuthKey(), user.get().getPassword())) {
-                            districts = districtsRepository.getDistrict(request.getDistrict());
-                            if (districts != null) {
-                                //Check if facility exists already
-                                Optional<FacilitySave> r = facilityRepository.findByFacilityName(request.getFacilityName());
-                                if (!r.isPresent()) {
-                                    facility = new FacilitySave();
-                                    facility.setDistrict(districts.getId());
-                                    facility.setFacilityName(request.getFacilityName());
-                                    facility.setOwnershipType(String.valueOf(2));
-                                    facility.setLocation(request.getFacilityLocation());
-                                    facility.setAccesibility(request.getAccessibility());
-                                    facility.setOwnership(request.getOwnership());
-                                    facility.setOperationalStatus(request.getOperationalStatus());
-                                    facility.setMobilityStatus(request.getMobilityStatus());
-                                    facility.setHpczCode(request.getHpczCode());
-                                    facility.setStatus(1);
-                                    facility.setType(request.getFacilityType());
-                                    facility.setEmail(request.getEmail());
-                                    facility.setMobileNumber(request.getMobileNumber());
-                                    facility.setTelephone(request.getTelephone());
-                                    facility.setTown(request.getTown());
-                                    facility.setStreet(request.getStreet());
-                                    facility.setFax(request.getFax());
-                                    facility.setPlotNo(request.getPlotNo());
-                                    facility.setPhysicalAddress(request.getPhysicalAddress());
-                                    facility.setPostalAddress(request.getPostalAddress());
-                                    facility.setLatitude(request.getLatitude());
-                                    facility.setLongitude(request.getLongitude());
-                                    java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
-                                    facility.setDateCreated(date);
-                                    FacilitySave result = this.facilityRepository.save(facility);
-                                    Integer id = result.getId();
-                                    if (id != null && id > 0) {
-                                        //Lets get the services parameter to get the shared id
-                                        String[] services = request.getServices().split(",");
-                                        if (services.length > 0) {
-                                            for (String service : services) {
-                                                //Check if service area exist
-                                                Optional<ServiceScope> serviceScope = serviceScopeRepository.findBySharedId(Integer.parseInt(service));
-                                                if (serviceScope.isPresent()) {
-                                                    //Check if facility service exist already
-                                                    Optional<FacilityServices> fs = facilityServicesRepository.findByFacilityIdAndServiceId(id, serviceScope.get().getId());
-                                                    if (!fs.isPresent()) {
-                                                        //We save the service now
-                                                        FacilityServices facilityServices = new FacilityServices();
-                                                        facilityServices.setFacilityId(id);
-                                                        facilityServices.setServiceAreaId(serviceScope.get().getCategoryId());
-                                                        facilityServices.setServiceId(serviceScope.get().getId());
-                                                        facilityServicesRepository.save(facilityServices);
-                                                    }
-                                                }
-                                            }
+                this.client = this.clientRepository.findByUsernameAndStatus(username, 1);
+                if (this.client != null) {
+                    //User exist, we check the provided password
+                    if (this.config.verifyKey(password + client.getAuthKey(), client.getPassword())) {
+                        response = true;
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            return response;
+        }
+        return response;
+    }
+
+    @PostMapping(value = {"/facility/push"}, consumes = {"application/json"}, produces = {"application/json"})
+    public ResponseEntity<?> facility(@Valid @RequestBody Request request, HttpServletRequest servletRequest) {
+        ResponseEntity resp = null;
+        try {
+//            String authorizationHeader = servletRequest.getHeader("Authorization");
+//            if (authorizationHeader != null && authorizationHeader.toLowerCase().startsWith("basic")) {
+//                String base64Credentials = authorizationHeader.substring("Basic".length()).trim();
+//                byte[] credDecoded = Base64.getDecoder().decode(base64Credentials);
+//                String credentials = new String(credDecoded, StandardCharsets.UTF_8);
+//                final String[] values = credentials.split(":", 2);
+//                String username = values[0];
+//                String password = values[1];
+//                Optional<ApiUsers> user = this.userRepo.findByUsername(username);
+//                if (user.isPresent()) {
+//                    if (user.get().getStatus() == 1) {
+//                        if (this.config.verifyKey(password + user.get().getAuthKey(), user.get().getPassword())) {
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                districts = districtsRepository.getDistrict(request.getDistrict());
+                if (districts != null) {
+                    //Check if facility exists already
+                    Optional<FacilitySave> r = facilityRepository.findByFacilityName(request.getFacilityName());
+                    if (!r.isPresent()) {
+                        facility = new FacilitySave();
+                        facility.setDistrict(districts.getId());
+                        facility.setFacilityName(request.getFacilityName());
+                        facility.setOwnershipType(String.valueOf(2));
+                        facility.setLocation(request.getFacilityLocation());
+                        facility.setAccesibility(request.getAccessibility());
+                        facility.setOwnership(request.getOwnership());
+                        facility.setOperationalStatus(request.getOperationalStatus());
+                        facility.setMobilityStatus(request.getMobilityStatus());
+                        facility.setHpczCode(request.getHpczCode());
+                        facility.setStatus(1);
+                        facility.setType(request.getFacilityType());
+                        facility.setEmail(request.getEmail());
+                        facility.setMobileNumber(request.getMobileNumber());
+                        facility.setTelephone(request.getTelephone());
+                        facility.setTown(request.getTown());
+                        facility.setStreet(request.getStreet());
+                        facility.setFax(request.getFax());
+                        facility.setPlotNo(request.getPlotNo());
+                        facility.setPhysicalAddress(request.getPhysicalAddress());
+                        facility.setPostalAddress(request.getPostalAddress());
+                        facility.setLatitude(request.getLatitude());
+                        facility.setLongitude(request.getLongitude());
+                        java.sql.Date date = new java.sql.Date(System.currentTimeMillis());
+                        facility.setDateCreated(date);
+                        FacilitySave result = this.facilityRepository.save(facility);
+                        Integer id = result.getId();
+                        if (id != null && id > 0) {
+                            //Lets get the services parameter to get the shared id
+                            String[] services = request.getServices().split(",");
+                            if (services.length > 0) {
+                                for (String service : services) {
+                                    //Check if service area exist
+                                    Optional<ServiceScope> serviceScope = serviceScopeRepository.findBySharedId(Integer.parseInt(service));
+                                    if (serviceScope.isPresent()) {
+                                        //Check if facility service exist already
+                                        Optional<FacilityServices> fs = facilityServicesRepository.findByFacilityIdAndServiceId(id, serviceScope.get().getId());
+                                        if (!fs.isPresent()) {
+                                            //We save the service now
+                                            FacilityServices facilityServices = new FacilityServices();
+                                            facilityServices.setFacilityId(id);
+                                            facilityServices.setServiceAreaId(serviceScope.get().getCategoryId());
+                                            facilityServices.setServiceId(serviceScope.get().getId());
+                                            facilityServicesRepository.save(facilityServices);
                                         }
-
-                                        resp = new ResponseEntity(new ApiResponse(true, "success", id), HttpStatus.ACCEPTED);
-
-                                    } else {
-                                        resp = new ResponseEntity(new ApiResponse(false, "Facility could not be saved. Please try again!", ""), HttpStatus.INTERNAL_SERVER_ERROR);
                                     }
-                                } else {
-                                    resp = new ResponseEntity(new ApiResponse(false, "Facility with facility name:" + request.getFacilityName() + " exists already!", ""), HttpStatus.NOT_ACCEPTABLE);
                                 }
-                            } else {
-                                resp = new ResponseEntity(new ApiResponse(false, "District:" + request.getDistrict() + " not found on the MFL!", ""), HttpStatus.NOT_FOUND);
                             }
+
+                            resp = new ResponseEntity(new ApiResponse(true, "success", id), HttpStatus.ACCEPTED);
+
                         } else {
-                            resp = new ResponseEntity(new ApiResponse(false, "Invalid credentials provided!", ""), HttpStatus.UNAUTHORIZED);
+                            resp = new ResponseEntity(new ApiResponse(false, "Facility could not be saved. Please try again!", ""), HttpStatus.INTERNAL_SERVER_ERROR);
                         }
                     } else {
-                        resp = new ResponseEntity(new ApiResponse(false, "User is deactivated!", ""), HttpStatus.UNAUTHORIZED);
+                        resp = new ResponseEntity(new ApiResponse(false, "Facility with facility name:" + request.getFacilityName() + " exists already!", ""), HttpStatus.NOT_ACCEPTABLE);
                     }
                 } else {
-                    resp = new ResponseEntity(new ApiResponse(false, "Invalid credentials provided!", ""), HttpStatus.UNAUTHORIZED);
+                    resp = new ResponseEntity(new ApiResponse(false, "District:" + request.getDistrict() + " not found on the MFL!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                resp = new ResponseEntity(new ApiResponse(false, "Invalid credentials provided!", ""), HttpStatus.BAD_REQUEST);
-
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
+//                        } else {
+//                            resp = new ResponseEntity(new ApiResponse(false, "Invalid credentials provided!", ""), HttpStatus.UNAUTHORIZED);
+//                        }
+//                    } else {
+//                        resp = new ResponseEntity(new ApiResponse(false, "User is deactivated!", ""), HttpStatus.UNAUTHORIZED);
+//                    }
+//                } else {
+//                    resp = new ResponseEntity(new ApiResponse(false, "Invalid credentials provided!", ""), HttpStatus.UNAUTHORIZED);
+//                }
+//            } else {
+//                resp = new ResponseEntity(new ApiResponse(false, "Invalid credentials provided!", ""), HttpStatus.BAD_REQUEST);
+//
+//            }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
         }
@@ -265,13 +311,19 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/OperatingFacilityType", produces = "application/json")
-    public ResponseEntity<?> FacilityByType() {
+    public ResponseEntity<?> FacilityByType(HttpServletRequest servletRequest) {
         try {
-            List<FacilityTypeCounts> list = countFacilitiesByTypeRepository.findByFacilityTypeId();
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<FacilityTypeCounts> list = countFacilitiesByTypeRepository.findByFacilityTypeId();
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No Facilities by type were found!", ""), HttpStatus.NOT_FOUND);
+                }
+
             } else {
-                return new ResponseEntity(new ApiResponse(false, "No Facilities by type were found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -284,13 +336,18 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/OperatingFacilityProvince", produces = "application/json")
-    public ResponseEntity<?> FacilityByProvince() {
+    public ResponseEntity<?> FacilityByProvince(HttpServletRequest servletRequest) {
         try {
-            List<FacilityByProvince> list = countFacilitiesByProvinceRepository.findByDistrictId();
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<FacilityByProvince> list = countFacilitiesByProvinceRepository.findByDistrictId();
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No Facilities by type were found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "No Facilities by type were found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -305,14 +362,21 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/NearestFacilities/{longitude}/{latitude}", produces = "application/json")
-    public ResponseEntity<?> Facility(@PathVariable String longitude, @PathVariable String latitude) {
+    public ResponseEntity<?> getNearestFacility(@PathVariable String longitude,
+            @PathVariable String latitude,
+            HttpServletRequest servletRequest) {
         try {
-            List<Facilities> list = facilitiesRepository.findByLongitudeAndLatitude(longitude, latitude);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Facilities> list = facilitiesRepository.findByLongitudeAndLatitude(longitude, latitude);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "There are no Facilities near "
+                            + "coordinates(" + longitude + "," + latitude + ")!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "There are no Facilities near "
-                        + "coordinates(" + longitude + "," + latitude + ")!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -325,14 +389,19 @@ public class RestController {
      * @param name
      * @return ResponseEntity
      */
-    @GetMapping(value = "/Facilities/{name}", produces = "application/json")
-    public ResponseEntity<?> Facility(@PathVariable String name) {
+    @GetMapping(value = "/Facilities/name/{name}", produces = "application/json")
+    public ResponseEntity<?> getFacility(@PathVariable String name, HttpServletRequest servletRequest) {
         try {
-            List<Facilities> list = facilitiesRepository.findByName(name);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Facilities> list = facilitiesRepository.findByName(name);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "Facility: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Facility: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -347,13 +416,18 @@ public class RestController {
      */
     @GetMapping(value = "/facility/{id}", produces = "application/json")
     public ResponseEntity<?> FacilityById(
-            @PathVariable Integer id) {
+            @PathVariable Integer id, HttpServletRequest servletRequest) {
         try {
-            Facilities facility = facilitiesRepository.findByFacilitiyId(id);
-            if (facility != null) {
-                return new ResponseEntity(new ApiResponse(true, "Success", facility), HttpStatus.ACCEPTED);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Facilities facility = facilitiesRepository.findByFacilitiyId(id);
+                if (facility != null) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", facility), HttpStatus.ACCEPTED);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "There is no facility with id:" + id, ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "There is no facility with id:" + id, ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -366,13 +440,18 @@ public class RestController {
      * @return
      */
     @GetMapping(value = "/facilities", produces = "application/json")
-    public ResponseEntity<?> Facilities() {
+    public ResponseEntity<?> Facilities(HttpServletRequest servletRequest) {
         try {
-            List<Facilities> list = facilitiesRepository.findAllFacilitieses();
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Facilities> list = facilitiesRepository.findAllFacilitieses();
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No Facility was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "No Facility was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -387,27 +466,37 @@ public class RestController {
      * @return
      */
     @GetMapping(value = "/Facilities/{name}/{district_id}", produces = "application/json")
-    public ResponseEntity<?> Facility(@PathVariable String name, Long district_id) {
+    public ResponseEntity<?> getFacilityByDistrict(@PathVariable String name, Long district_id, HttpServletRequest servletRequest) {
         try {
-            List<Facilities> list = facilitiesRepository.findByNameAndDistrictId(name, district_id);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Facilities> list = facilitiesRepository.findByNameAndDistrictId(name, district_id);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "Facility: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Facility: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @GetMapping(value = "/FacilityByService/{serviceName}", produces = "application/json")
-    public ResponseEntity<?> FacilityByService(@PathVariable String serviceName) {
+    @GetMapping(value = "/FacilityByService/name/{serviceName}", produces = "application/json")
+    public ResponseEntity<?> FacilityByService(@PathVariable String serviceName, HttpServletRequest servletRequest) {
         try {
-            List<Facilities> list = facilitiesRepository.findByName(serviceName);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Facilities> list = facilitiesRepository.findByName(serviceName);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "Facility: " + serviceName + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Facility: " + serviceName + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -421,18 +510,23 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Wards/{ward_id}/facilities", produces = "application/json")
-    public ResponseEntity<?> FacilitiesByWardId(@PathVariable String ward_id) {
+    public ResponseEntity<?> FacilitiesByWardId(@PathVariable String ward_id, HttpServletRequest servletRequest) {
         try {
-            Optional<Wards> d = wardsRepository.findById(Long.valueOf(ward_id));
-            if (d.isPresent()) {
-                List<Facilities> list = facilitiesRepository.findByWardId(d.get().getId());
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<Wards> d = wardsRepository.findById(Long.valueOf(ward_id));
+                if (d.isPresent()) {
+                    List<Facilities> list = facilitiesRepository.findByWardId(d.get().getId());
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "There are no facilities in the system for the ward with id:" + ward_id, ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "There are no facilities in the system for the ward with id:" + ward_id, ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "Ward with id:" + ward_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Ward with id:" + ward_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -446,18 +540,23 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Constituencies/{constituency_id}/facilities", produces = "application/json")
-    public ResponseEntity<?> FacilitiesByConstituencyId(@PathVariable String constituency_id) {
+    public ResponseEntity<?> FacilitiesByConstituencyId(@PathVariable String constituency_id, HttpServletRequest servletRequest) {
         try {
-            Optional<Constituencies> d = constituenciesRepository.findById(Long.valueOf(constituency_id));
-            if (d.isPresent()) {
-                List<Facilities> list = facilitiesRepository.findByConstituencyId(d.get().getId());
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<Constituencies> d = constituenciesRepository.findById(Long.valueOf(constituency_id));
+                if (d.isPresent()) {
+                    List<Facilities> list = facilitiesRepository.findByConstituencyId(d.get().getId());
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "There are no facilities in the system for the constituency with id:" + constituency_id, ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "There are no facilities in the system for the constituency with id:" + constituency_id, ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "Constituency with id:" + constituency_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Constituency with id:" + constituency_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -471,18 +570,25 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Districts/{district_id}/facilities", produces = "application/json")
-    public ResponseEntity<?> FacilitiesByDistrictId(@PathVariable String district_id) {
+    public ResponseEntity<?> FacilitiesByDistrictId(@PathVariable String district_id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<Districts> d = districtsRepository.findById(Long.valueOf(district_id));
-            if (d.isPresent()) {
-                List<Facilities> list = facilitiesRepository.findByDistrictId(Long.valueOf(d.get().getId()));
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+
+                Optional<Districts> d = districtsRepository.findById(Long.valueOf(district_id));
+                if (d.isPresent()) {
+                    List<Facilities> list = facilitiesRepository.findByDistrictId(Long.valueOf(d.get().getId()));
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "There are no facilities in the system for the distrcit with id:" + district_id, ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "There are no facilities in the system for the distrcit with id:" + district_id, ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "District with id:" + district_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "District with id:" + district_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -496,19 +602,26 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Provinces/{province_id}/facilities", produces = "application/json")
-    public ResponseEntity<?> FacilitiesByProvinceId(@PathVariable String province_id) {
+    public ResponseEntity<?> FacilitiesByProvinceId(@PathVariable String province_id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<Provinces> province = provincesRepository.findById(Long.valueOf(province_id));
-            if (province.isPresent()) {
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
 
-                List<Facilities> list = facilitiesRepository.findByProvinceId(Long.valueOf(province_id));
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                Optional<Provinces> province = provincesRepository.findById(Long.valueOf(province_id));
+                if (province.isPresent()) {
+
+                    List<Facilities> list = facilitiesRepository.findByProvinceId(Long.valueOf(province_id));
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "There are no facilities in the system for the province with id:" + province_id, ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "There are no facilities in the system for the province with id:" + province_id, ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "Province with id:" + province_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Province with id:" + province_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -521,13 +634,18 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/FacilityOwnership", produces = "application/json")
-    public ResponseEntity<?> FacilityOwnership() {
+    public ResponseEntity<?> FacilityOwnerships(HttpServletRequest servletRequest) {
         try {
-            List<Ownership> list = ownershipRepository.findAll();
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Ownership> list = ownershipRepository.findAll();
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No facility ownerships were found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "No facility ownerships were found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -540,14 +658,20 @@ public class RestController {
      * @param name
      * @return ResponseEntity
      */
-    @GetMapping(value = "/FacilityOwnership/{name}", produces = "application/json")
-    public ResponseEntity<?> FacilityOwnership(@PathVariable String name) {
+    @GetMapping(value = "/FacilityOwnership/name/{name}", produces = "application/json")
+    public ResponseEntity<?> getFacilityOwnership(@PathVariable String name, HttpServletRequest servletRequest
+    ) {
         try {
-            List<Ownership> list = ownershipRepository.findByName(name);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Ownership> list = ownershipRepository.findByName(name);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "Facility ownership name: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Facility ownership name: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -562,18 +686,24 @@ public class RestController {
      * @return
      */
     @GetMapping(value = "/FacilityOwnership/{facility_ownership_id}/Facilities", produces = "application/json")
-    public ResponseEntity<?> FacilitiesByOwnershipId(@PathVariable String facility_ownership_id) {
+    public ResponseEntity<?> FacilitiesByOwnershipId(@PathVariable String facility_ownership_id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<Ownership> d = ownershipRepository.findById(Long.valueOf(facility_ownership_id));
-            if (d.isPresent()) {
-                List<Facilities> list = facilitiesRepository.findByOwnershipId(Long.valueOf(facility_ownership_id));
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<Ownership> d = ownershipRepository.findById(Long.valueOf(facility_ownership_id));
+                if (d.isPresent()) {
+                    List<Facilities> list = facilitiesRepository.findByOwnershipId(Long.valueOf(facility_ownership_id));
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "No Facilities found for Facility ownership id: " + facility_ownership_id + "!", ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "No Facilities found for Facility ownership id: " + facility_ownership_id + "!", ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "Facility ownership with id:" + facility_ownership_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Facility ownership with id:" + facility_ownership_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -586,13 +716,18 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/FacilityOperationStatus", produces = "application/json")
-    public ResponseEntity<?> FacilityOperationStatus() {
+    public ResponseEntity<?> getFacilityOperationStatus(HttpServletRequest servletRequest) {
         try {
-            List<OperationStatus> list = operationStatusRepository.findAll();
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<OperationStatus> list = operationStatusRepository.findAll();
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No facility operation statuses were found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "No facility operation statuses were found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -605,14 +740,21 @@ public class RestController {
      * @param name
      * @return ResponseEntity
      */
-    @GetMapping(value = "/FacilityOperationStatus/{name}", produces = "application/json")
-    public ResponseEntity<?> FacilityOperationStatus(@PathVariable String name) {
+    @GetMapping(value = "/FacilityOperationStatus/name/{name}", produces = "application/json")
+    public ResponseEntity<?> FacilityOperationStatus(@PathVariable String name, HttpServletRequest servletRequest
+    ) {
         try {
-            List<OperationStatus> list = operationStatusRepository.findByName(name);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+
+                List<OperationStatus> list = operationStatusRepository.findByName(name);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "Facility operation status name: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Facility operation status name: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -627,18 +769,25 @@ public class RestController {
      * @return
      */
     @GetMapping(value = "/FacilityOperationStatus/{facility_opstatus_id}/Facilities", produces = "application/json")
-    public ResponseEntity<?> FacilitiesByOperationStatusId(@PathVariable String facility_opstatus_id) {
+    public ResponseEntity<?> FacilitiesByOperationStatusId(@PathVariable String facility_opstatus_id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<OperationStatus> d = operationStatusRepository.findById(Long.valueOf(facility_opstatus_id));
-            if (d.isPresent()) {
-                List<Facilities> list = facilitiesRepository.findByOperationStatusId(Long.valueOf(facility_opstatus_id));
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<OperationStatus> d = operationStatusRepository.findById(Long.valueOf(facility_opstatus_id));
+                if (d.isPresent()) {
+                    List<Facilities> list = facilitiesRepository.findByOperationStatusId(Long.valueOf(facility_opstatus_id));
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "No Facilities found for Facility operation status id: " + facility_opstatus_id + "!", ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "No Facilities found for Facility operation status id: " + facility_opstatus_id + "!", ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "Facility operation status with id:" + facility_opstatus_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Facility operation status with id:" + facility_opstatus_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -651,13 +800,19 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Facilitytypes", produces = "application/json")
-    public ResponseEntity<?> Facilitytypes() {
+    public ResponseEntity<?> Facilitytypes(HttpServletRequest servletRequest) {
         try {
-            List<FacilityTypes> list = facilityTypesRepository.findAll();
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<FacilityTypes> list = facilityTypesRepository.findAll();
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No facility types were found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "No facility types were found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -670,14 +825,20 @@ public class RestController {
      * @param name
      * @return ResponseEntity
      */
-    @GetMapping(value = "/Facilitytypes/{name}", produces = "application/json")
-    public ResponseEntity<?> Facilitytype(@PathVariable String name) {
+    @GetMapping(value = "/Facilitytypes/name/{name}", produces = "application/json")
+    public ResponseEntity<?> Facilitytype(@PathVariable String name, HttpServletRequest servletRequest
+    ) {
         try {
-            List<FacilityTypes> list = facilityTypesRepository.findByName(name);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<FacilityTypes> list = facilityTypesRepository.findByName(name);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "Facility type: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Facility type: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -692,18 +853,24 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Facilitytypes/{facility_type_id}/facilities", produces = "application/json")
-    public ResponseEntity<?> FacilitiestByFacilityType(@PathVariable String facility_type_id) {
+    public ResponseEntity<?> FacilitiestByFacilityType(@PathVariable String facility_type_id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<FacilityTypes> facilitytypes = facilityTypesRepository.findById(Long.valueOf(facility_type_id));
-            if (facilitytypes.isPresent()) {
-                List<Facilities> list = facilitiesRepository.findByFacilityTypeId(Long.valueOf(facility_type_id));
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<FacilityTypes> facilitytypes = facilityTypesRepository.findById(Long.valueOf(facility_type_id));
+                if (facilitytypes.isPresent()) {
+                    List<Facilities> list = facilitiesRepository.findByFacilityTypeId(Long.valueOf(facility_type_id));
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "No Facilities found for Facility type id: " + facility_type_id + "!", ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "No Facilities found for Facility type id: " + facility_type_id + "!", ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "Facility type with id:" + facility_type_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Facility type with id:" + facility_type_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -716,14 +883,20 @@ public class RestController {
      * @param name
      * @return ResponseEntity
      */
-    @GetMapping(value = "/Wards/{name}", produces = "application/json")
-    public ResponseEntity<?> Ward(@PathVariable String name) {
+    @GetMapping(value = "/Wards/name/{name}", produces = "application/json")
+    public ResponseEntity<?> Ward(@PathVariable String name, HttpServletRequest servletRequest
+    ) {
         try {
-            List<Wards> list = wardsRepository.findByName(name);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Wards> list = wardsRepository.findByName(name);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "Ward: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Ward: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -737,18 +910,24 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Districts/{district_id}/Wards", produces = "application/json")
-    public ResponseEntity<?> WardsByDistrictId(@PathVariable String district_id) {
+    public ResponseEntity<?> WardsByDistrictId(@PathVariable String district_id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<Districts> d = districtsRepository.findById(Long.valueOf(district_id));
-            if (d.isPresent()) {
-                List<Wards> list = wardsRepository.findByDistrictId(Long.valueOf(d.get().getId()));
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<Districts> d = districtsRepository.findById(Long.valueOf(district_id));
+                if (d.isPresent()) {
+                    List<Wards> list = wardsRepository.findByDistrictId(Long.valueOf(d.get().getId()));
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "There are no wards in the system for the District with id:" + district_id, ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "There are no wards in the system for the District with id:" + district_id, ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "District with id:" + district_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "District with id:" + district_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -762,18 +941,24 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Constituencies/{constituency_id}/Wards", produces = "application/json")
-    public ResponseEntity<?> WardsByConstituencyId(@PathVariable String constituency_id) {
+    public ResponseEntity<?> WardsByConstituencyId(@PathVariable String constituency_id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<Constituencies> d = constituenciesRepository.findById(Long.valueOf(constituency_id));
-            if (d.isPresent()) {
-                List<Wards> list = wardsRepository.findByConstituencyId(d.get().getId());
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<Constituencies> d = constituenciesRepository.findById(Long.valueOf(constituency_id));
+                if (d.isPresent()) {
+                    List<Wards> list = wardsRepository.findByConstituencyId(d.get().getId());
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "There are no wards in the system for the Constituency with id:" + constituency_id, ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "There are no wards in the system for the Constituency with id:" + constituency_id, ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "Constituency with id:" + constituency_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Constituency with id:" + constituency_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -786,14 +971,20 @@ public class RestController {
      * @param name
      * @return ResponseEntity
      */
-    @GetMapping(value = "/Constituencies/{name}", produces = "application/json")
-    public ResponseEntity<?> Constituency(@PathVariable String name) {
+    @GetMapping(value = "/Constituencies/name/{name}", produces = "application/json")
+    public ResponseEntity<?> Constituency(@PathVariable String name, HttpServletRequest servletRequest
+    ) {
         try {
-            List<Constituencies> list = constituenciesRepository.findByName(name);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Constituencies> list = constituenciesRepository.findByName(name);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "Constituency: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Constituency: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -807,18 +998,24 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Districts/{district_id}/Constituencies", produces = "application/json")
-    public ResponseEntity<?> ConstituenciesByDistrictId(@PathVariable String district_id) {
+    public ResponseEntity<?> ConstituenciesByDistrictId(@PathVariable String district_id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<Districts> d = districtsRepository.findById(Long.valueOf(district_id));
-            if (d.isPresent()) {
-                List<Constituencies> list = constituenciesRepository.findByDistrictId(Long.valueOf(d.get().getId()));
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<Districts> d = districtsRepository.findById(Long.valueOf(district_id));
+                if (d.isPresent()) {
+                    List<Constituencies> list = constituenciesRepository.findByDistrictId(Long.valueOf(d.get().getId()));
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "There are no constituencies in the system for the District with id:" + district_id, ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "There are no constituencies in the system for the District with id:" + district_id, ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "District with id:" + district_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "District with id:" + district_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -831,14 +1028,20 @@ public class RestController {
      * @param name
      * @return ResponseEntity
      */
-    @GetMapping(value = "/Districts/{name}", produces = "application/json")
-    public ResponseEntity<?> District(@PathVariable String name) {
+    @GetMapping(value = "/Districts/name/{name}", produces = "application/json")
+    public ResponseEntity<?> getDistrict(@PathVariable String name, HttpServletRequest servletRequest
+    ) {
         try {
-            List<Districts> list = districtsRepository.findByName(name);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Districts> list = districtsRepository.findByName(name);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "District: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "District: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -852,14 +1055,20 @@ public class RestController {
      * @param id
      * @return ResponseEntity
      */
-    @GetMapping(value = "/Districts/{id}", produces = "application/json")
-    public ResponseEntity<?> District(@PathVariable Long id) {
+    @GetMapping(value = "/Districts/id/{id}", produces = "application/json")
+    public ResponseEntity<?> getDistrictById(@PathVariable Long id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<Districts> list = districtsRepository.findById(id);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<Districts> list = districtsRepository.findById(id);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "District by id: " + id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "District by id: " + id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -873,13 +1082,18 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Districttypes", produces = "application/json")
-    public ResponseEntity<?> Districttypes() {
+    public ResponseEntity<?> getDistricttypes(HttpServletRequest servletRequest) {
         try {
-            List<Districttypes> list = districtTypesRepository.findAll();
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Districttypes> list = districtTypesRepository.findAll();
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No District types were found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "No District types were found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -893,14 +1107,20 @@ public class RestController {
      * @param name
      * @return ResponseEntity
      */
-    @GetMapping(value = "/Districttypes/{name}", produces = "application/json")
-    public ResponseEntity<?> Districttype(@PathVariable String name) {
+    @GetMapping(value = "/Districttypes/name/{name}", produces = "application/json")
+    public ResponseEntity<?> getDistricttypeByName(@PathVariable String name, HttpServletRequest servletRequest
+    ) {
         try {
-            List<Districttypes> list = districtTypesRepository.findByName(name);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Districttypes> list = districtTypesRepository.findByName(name);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "District type: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "District type: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -915,18 +1135,24 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Districttypes/{districttype_id}/Districts", produces = "application/json")
-    public ResponseEntity<?> DistrictsByDistricttypeId(@PathVariable String districttype_id) {
+    public ResponseEntity<?> DistrictsByDistricttypeId(@PathVariable String districttype_id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<Districttypes> p = districtTypesRepository.findById(Long.valueOf(districttype_id));
-            if (p.isPresent()) {
-                List<Districts> list = districtsRepository.findByDistrictTypeId(Long.valueOf(p.get().getId()));
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<Districttypes> p = districtTypesRepository.findById(Long.valueOf(districttype_id));
+                if (p.isPresent()) {
+                    List<Districts> list = districtsRepository.findByDistrictTypeId(Long.valueOf(p.get().getId()));
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "There are no districts in the system for the District type with id:" + districttype_id, ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "There are no districts in the system for the District type with id:" + districttype_id, ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "District type with id:" + districttype_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "District type with id:" + districttype_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -940,18 +1166,24 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/Provinces/{province_id}/Districts", produces = "application/json")
-    public ResponseEntity<?> DistrictsByProvinceId(@PathVariable String province_id) {
+    public ResponseEntity<?> DistrictsByProvinceId(@PathVariable String province_id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<Provinces> p = provincesRepository.findById(Long.valueOf(province_id));
-            if (p.isPresent()) {
-                List<Districts> list = districtsRepository.findByProvinceId(Long.valueOf(p.get().getId()));
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<Provinces> p = provincesRepository.findById(Long.valueOf(province_id));
+                if (p.isPresent()) {
+                    List<Districts> list = districtsRepository.findByProvinceId(Long.valueOf(p.get().getId()));
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "There are no districts in the system for the Province with id:" + province_id, ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "There are no districts in the system for the Province with id:" + province_id, ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "Province with id:" + province_id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Province with id:" + province_id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -964,13 +1196,18 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/provinces", produces = "application/json")
-    public ResponseEntity<?> Provinces() {
+    public ResponseEntity<?> Provinces(HttpServletRequest servletRequest) {
         try {
-            List<Provinces> list = provincesRepository.findAll();
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Provinces> list = provincesRepository.findAll();
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No Provinces were found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "No Provinces were found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -984,18 +1221,22 @@ public class RestController {
      * @return
      */
     @GetMapping(value = "/provinces/idAndName", produces = "application/json")
-    public ResponseEntity<?> ProvinceIdAndName() {
+    public ResponseEntity<?> ProvinceIdAndName(HttpServletRequest servletRequest) {
         try {
-            List<ProvinceList> list = provincesIdAndNameOnlyRepository.getIdAndNameOnly();
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<ProvinceList> list = provincesIdAndNameOnlyRepository.getIdAndNameOnly();
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "No Provinces were found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "No Provinces were found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
     }
 
     /**
@@ -1005,13 +1246,19 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/provinces/{name}", produces = "application/json")
-    public ResponseEntity<?> Province(@PathVariable String name) {
+    public ResponseEntity<?> getProvinceByName(@PathVariable String name, HttpServletRequest servletRequest
+    ) {
         try {
-            List<Provinces> list = provincesRepository.findByName(name);
-            if (!list.isEmpty()) {
-                return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                List<Provinces> list = provincesRepository.findByName(name);
+                if (!list.isEmpty()) {
+                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                } else {
+                    return new ResponseEntity(new ApiResponse(false, "Province: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Province: " + name + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (Exception ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -1026,18 +1273,24 @@ public class RestController {
      * @return ResponseEntity
      */
     @GetMapping(value = "/district/{id}/facilitiesIdAndName", produces = "application/json")
-    public ResponseEntity<?> FacilityIdAndNameOnlyByProvinceId(@PathVariable String id) {
+    public ResponseEntity<?> FacilityIdAndNameOnlyByProvinceId(@PathVariable String id, HttpServletRequest servletRequest
+    ) {
         try {
-            Optional<Districts> district = districtsRepository.findById(Long.valueOf(id));
-            if (district.isPresent()) {
-                List<FacilityIdAndName> list = facilitiesIdAndNameOnlyRepository.findByDistrictId(Long.valueOf(id));
-                if (!list.isEmpty()) {
-                    return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+            String authorizationHeader = servletRequest.getHeader("Authorization");
+            if (!authorizationHeader.isEmpty() && this.checkCredentials(authorizationHeader)) {
+                Optional<Districts> district = districtsRepository.findById(Long.valueOf(id));
+                if (district.isPresent()) {
+                    List<FacilityIdAndName> list = facilitiesIdAndNameOnlyRepository.findByDistrictId(Long.valueOf(id));
+                    if (!list.isEmpty()) {
+                        return new ResponseEntity(new ApiResponse(true, "Success", list), HttpStatus.OK);
+                    } else {
+                        return new ResponseEntity(new ApiResponse(false, "There are no facilities in the system for the province with id:" + id, ""), HttpStatus.NOT_FOUND);
+                    }
                 } else {
-                    return new ResponseEntity(new ApiResponse(false, "There are no facilities in the system for the province with id:" + id, ""), HttpStatus.NOT_FOUND);
+                    return new ResponseEntity(new ApiResponse(false, "Province with id:" + id + " was not found!", ""), HttpStatus.NOT_FOUND);
                 }
             } else {
-                return new ResponseEntity(new ApiResponse(false, "Province with id:" + id + " was not found!", ""), HttpStatus.NOT_FOUND);
+                return new ResponseEntity(new ApiResponse(false, "Failed", "Authentication failed. Invalid Username/password provided!"), HttpStatus.UNAUTHORIZED);
             }
         } catch (NumberFormatException ex) {
             return new ResponseEntity(new ApiResponse(false, "Internal server error occured. Error is::" + ex.getCause().getMessage(), ""), HttpStatus.INTERNAL_SERVER_ERROR);
@@ -1052,9 +1305,12 @@ public class RestController {
      * @return
      */
     @PostMapping(value = {"/authenticate"}, consumes = {"application/json"}, produces = {"application/json"})
-    public ResponseEntity<?> authenticateUser(@Valid @RequestBody AuthRequest request, HttpServletRequest servletRequest) {
+    public ResponseEntity<?> authenticateUser(@Valid
+            @RequestBody AuthRequest request, HttpServletRequest servletRequest
+    ) {
         try {
             resp = processRequest(request);
+
         } catch (RestClientException ex) {
             resp = new ResponseEntity(new ApiResponse(false, "Server Error occured", ""), HttpStatus.INTERNAL_SERVER_ERROR);
         }

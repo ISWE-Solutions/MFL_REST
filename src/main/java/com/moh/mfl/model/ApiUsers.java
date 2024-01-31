@@ -43,12 +43,13 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 public class ApiUsers implements Serializable {
 
+
     private static final long serialVersionUID = 1L;
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Basic(optional = false)
     @Column(name = "id")
-    private Integer id;
+    private Long id;
     @Basic(optional = false)
     @NotNull
     @Size(min = 1, max = 2147483647)
@@ -78,15 +79,17 @@ public class ApiUsers implements Serializable {
     @Column(name = "updated_at")
     @Temporal(TemporalType.TIMESTAMP)
     private Date updatedAt;
+    @Column(name = "email")
+    private String email;
 
     public ApiUsers() {
     }
 
-    public ApiUsers(Integer id) {
+    public ApiUsers(Long id) {
         this.id = id;
     }
 
-    public ApiUsers(Integer id, String username, String password, String authKey, int status) {
+    public ApiUsers(Long id, String username, String password, String authKey, int status) {
         this.id = id;
         this.username = username;
         this.password = password;
@@ -94,11 +97,11 @@ public class ApiUsers implements Serializable {
         this.status = status;
     }
 
-    public Integer getId() {
+    public Long getId() {
         return id;
     }
 
-    public void setId(Integer id) {
+    public void setId(Long id) {
         this.id = id;
     }
 
@@ -164,6 +167,21 @@ public class ApiUsers implements Serializable {
 
     public void setUpdatedAt(Date updatedAt) {
         this.updatedAt = updatedAt;
+    }
+    
+    
+    /**
+     * @return the email
+     */
+    public String getEmail() {
+        return email;
+    }
+
+    /**
+     * @param email the email to set
+     */
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     @Override
